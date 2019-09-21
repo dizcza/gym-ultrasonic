@@ -1,8 +1,8 @@
 import numpy as np
-from shapely.geometry import Polygon, LineString, Point
 from shapely import affinity
 from shapely import speedups
-from matplotlib import pyplot as plt
+from shapely.geometry import Polygon, LineString, Point
+
 if speedups.available:
     speedups.enable()
     print("Speedups enabled")
@@ -58,7 +58,7 @@ class Obstacle(object):
 
     def get_rotated_corners(self):
         corners = self.get_corners()
-        for i in xrange(len(corners)):
+        for i in range(len(corners)):
             angleInRad = self.angle * np.pi / 180
             translatedCorner = np.subtract(self.position, corners[i])
             rotatedX = translatedCorner[0] * np.cos(

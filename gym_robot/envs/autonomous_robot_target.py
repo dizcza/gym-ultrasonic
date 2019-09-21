@@ -1,14 +1,14 @@
 import gym
-from gym import spaces
-from obstacles import Robot, Obstacle
 import numpy as np
-import random
+from gym import spaces
+
+from .obstacles import Robot, Obstacle
+
 try:
     from gym.envs.classic_control import rendering
     renderingAvailable = True
 except Exception:
     renderingAvailable = False
-import time
 from random import randint
 
 

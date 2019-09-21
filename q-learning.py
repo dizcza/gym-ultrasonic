@@ -32,14 +32,14 @@ rewards = []
 
 def soft_exit(signal, frame):
     print("Abort Training \n")
-    var = raw_input("Want to save the model? y/n")
+    var = input("Want to save the model? y/n")
     if var == 'y':
         np.save("qTable", Q)
         # Plot that stuff
         f, axarr = plt.subplots(2, sharex=True)
-        axarr[0].plot(range(curr_ep), rewards)
+        axarr[0].plot(list(range(curr_ep)), rewards)
         axarr[0].set_ylabel("Reward")
-        axarr[1].plot(range(curr_ep), iterations_per_episode)
+        axarr[1].plot(list(range(curr_ep)), iterations_per_episode)
         axarr[1].set_ylabel("Iterationen")
         plt.xlabel('Episoden')
         plt.savefig("diagrams/rewardQ2Learning.pdf")
@@ -77,23 +77,23 @@ for episode in range(num_episodes):
         s = s1
         if done == True:
             epsilon *= epsilon_decay
-            print("episode: {}/{}, score: {}, time: {}, e: {:.2} "
-                  .format(episode, num_episodes, rAll, iteration, epsilon))
+            print(("episode: {}/{}, score: {}, time: {}, e: {:.2} "
+                  .format(episode, num_episodes, rAll, iteration, epsilon)))
             break
 
     rewards.append(rAll)
     iterations_per_episode.append(iteration)
-print "Score over time: " + str(sum(rewards) / num_episodes)
+print("Score over time: " + str(sum(rewards) / num_episodes))
 
-print "Final Q-Table Values"
-print Q
+print("Final Q-Table Values")
+print(Q)
 
 np.save("qTable", Q)
 # Plot that stuff
 f, axarr = plt.subplots(2, sharex=True)
-axarr[0].plot(range(num_episodes), rewards)
+axarr[0].plot(list(range(num_episodes)), rewards)
 axarr[0].set_ylabel("Reward")
-axarr[1].plot(range(num_episodes), iterations_per_episode)
+axarr[1].plot(list(range(num_episodes)), iterations_per_episode)
 axarr[1].set_ylabel("Iterationen")
 plt.xlabel('Episoden')
 plt.savefig("diagrams/rewardQ2Learning.pdf")

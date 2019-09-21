@@ -92,7 +92,7 @@ if __name__ == "__main__":
 
     def soft_exit(signal, frame):
         print("Abort Training \n")
-        var = raw_input("Want to save the model? y/n")
+        var = input("Want to save the model? y/n")
         if var == 'y':
             agent.save("./save/v3.h5")
         sys.exit(0)
@@ -120,8 +120,8 @@ if __name__ == "__main__":
             agent.remember(state, action, reward, next_state, done)
             state = next_state
             if done:
-                print("episode: {}/{}, score: {}, time: {} e: {:.2}"
-                      .format(e, EPISODES, sum_reward, time, agent.epsilon))
+                print(("episode: {}/{}, score: {}, time: {} e: {:.2}"
+                      .format(e, EPISODES, sum_reward, time, agent.epsilon)))
                 if(e % AVG_REW == 0 and e != 0):
                     avg = np.average(reward_history[e - AVG_REW:e])
                     avg_history.append(avg)
@@ -134,24 +134,24 @@ if __name__ == "__main__":
         if(e % SAVE_EP == 0 and e != 0):
             name = "./save/v3" + str(e) + ".h5"
             agent.save(name)
-            plt.plot(range(0, e, AVG_REW), avg_history[0:e / AVG_REW])
+            plt.plot(list(range(0, e, AVG_REW)), avg_history[0:e / AVG_REW])
             plt.legend(['Average Reward'], loc='upper left')
             plt.savefig("diagrams/" + str(e) + "reward.pdf")
             plt.clf()
-            plt.plot(xrange(SAVE_EP), reward_history[e - SAVE_EP:e])
-            plt.plot(xrange(SAVE_EP), time_history[e - SAVE_EP:e])
+            plt.plot(range(SAVE_EP), reward_history[e - SAVE_EP:e])
+            plt.plot(range(SAVE_EP), time_history[e - SAVE_EP:e])
             plt.legend(['Reward', 'Time'], loc='upper left')
             plt.savefig("diagrams/" + str(e) + "time.pdf")
             plt.clf()
             mv_avg = 0
 
     # Endresultat
-    plt.plot(xrange(EPISODES), reward_history)
-    plt.plot(xrange(0, EPISODES, AVG_REW), avg_history)
+    plt.plot(range(EPISODES), reward_history)
+    plt.plot(range(0, EPISODES, AVG_REW), avg_history)
     plt.legend(['Reward', 'Average Reward'], loc='upper left')
     plt.savefig("diagrams/reward.pdf")
     plt.clf()
-    plt.plot(xrange(EPISODES), reward_history)
-    plt.plot(xrange(EPISODES), time_history)
+    plt.plot(range(EPISODES), reward_history)
+    plt.plot(range(EPISODES), time_history)
     plt.legend(['Reward', 'Time'], loc='upper left')
     plt.savefig("diagrams/time.pdf")

@@ -1,9 +1,11 @@
-import gym
-import numpy as np
-import gym_robot fr
 import signal
 import sys
+
+import gym
+import numpy as np
 from matplotlib import pyplot as plt
+
+from gym_robot import *
 
 # load Environment with discretized inputs
 env = gym.make('AutonomousRobot-v2')
@@ -32,7 +34,7 @@ rewards = []
 
 def soft_exit(signal, frame):
     print("Abort Training \n")
-    var = raw_input("Want to save the model? y/n")
+    var = input("Want to save the model? y/n")
     if var == 'y':
         np.save("qTable", Q)
         # Plot that stuff
@@ -83,10 +85,9 @@ for episode in range(num_episodes):
 
     rewards.append(rAll)
     iterations_per_episode.append(iteration)
-print "Score over time: " + str(sum(rewards) / num_episodes)
+print("Score over time: ", sum(rewards) / num_episodes)
 
-print "Final Q-Table Values"
-print Q
+print("Final Q-Table Values", Q)
 
 np.save("qTable", Q)
 # Plot that stuff

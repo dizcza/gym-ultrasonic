@@ -5,7 +5,7 @@ with open('test.csv', 'rb') as f:
     data = list(reader)
 data.pop(0)
 epsiode_rew = []
-for i in xrange(len(data)):
+for i in range(len(data)):
     epsiode_rew.append(data[i][1])
 
 print(epsiode_rew)

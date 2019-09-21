@@ -1,7 +1,6 @@
 import unittest2 as unittest
 from shapely.geometry import Polygon
-import linalg_helper
-from obstacles import Robot, Obstacle
+from .obstacles import Robot, Obstacle
 import numpy as np
 
 

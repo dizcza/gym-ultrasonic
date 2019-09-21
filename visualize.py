@@ -7,16 +7,16 @@ import matplotlib.pyplot as plt
 
 def smooth(x, window_len=11, window='flat'):
     if x.ndim != 1:
-        raise ValueError, "smooth only accepts 1 dimension arrays."
+        raise ValueError("smooth only accepts 1 dimension arrays.")
 
     if x.size < window_len:
-        raise ValueError, "Input vector needs to be bigger than window size."
+        raise ValueError("Input vector needs to be bigger than window size.")
 
     if window_len < 3:
         return x
 
-    if not window in ['flat', 'hanning', 'hamming', 'bartlett', 'blackman']:
-        raise ValueError, "Window is on of 'flat', 'hanning', 'hamming', 'bartlett', 'blackman'"
+    if window not in ['flat', 'hanning', 'hamming', 'bartlett', 'blackman']:
+        raise ValueError("Window is on of 'flat', 'hanning', 'hamming', 'bartlett', 'blackman'")
 
     s = numpy.r_[x[window_len - 1:0:-1], x, x[-2:-window_len - 1:-1]]
     # print(len(s))
@@ -44,12 +44,12 @@ def visualize_log(filename, figsize=None, output=None):
         figsize = (15., 5. * len(keys))
     f, axarr = plt.subplots(len(keys), sharex=True, figsize=figsize)
     for idx, key in enumerate(keys):
-        #date = numpy.array(data[key])
+        # date = numpy.array(data[key])
         date = smooth(numpy.array(data[key]))
         axarr[idx].plot(episodes, data[key])
 
         if key != 'mean_q':
-            axarr[idx].plot(range(len(date)), date)
+            axarr[idx].plot(list(range(len(date))), date)
         axarr[idx].legend(['Original Data', 'Smoothed'], loc='upper left')
         axarr[idx].set_ylabel(key)
         plt.xlabel('episodes')

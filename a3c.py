@@ -1,4 +1,3 @@
-
 # -----------------------------------
 #
 # A3C implementation with GPU optimizer threads.
@@ -10,30 +9,34 @@
 import numpy as np
 import tensorflow as tf
 
-#Only allocate memory as needed
+# Only allocate memory as needed
 from keras.backend.tensorflow_backend import set_session
+
 config = tf.ConfigProto()
-config.gpu_options.allow_growth=True
+config.gpu_options.allow_growth = True
 set_session(tf.Session(config=config))
 
 import gym
 import time
 import random
 import threading
-import gym_robot
 from keras.models import *
 from keras.layers import *
 from keras import backend as K
 
+from gym_robot import *
+
 import matplotlib
-#needed for running on headless machines
+
+# needed for running on headless machines
 matplotlib.use('Agg')
 
 from matplotlib import pyplot as plt
-#-- constants
+
+# -- constants
 ENV = 'AutonomousRobot-v0'
 
-RUN_TIME = 60*60*12
+RUN_TIME = 60 * 60 * 12
 THREADS = 8
 OPTIMIZERS = 2
 THREAD_DELAY = 0.001
@@ -50,35 +53,34 @@ EPS_STEPS = 500000
 MIN_BATCH = 32
 LEARNING_RATE = 1e-3
 
-LOSS_V = .5			# v loss coefficient
-LOSS_ENTROPY = .01 	# entropy coefficient
+LOSS_V = .5  # v loss coefficient
+LOSS_ENTROPY = .01  # entropy coefficient
 
-#---------smooth Function
-def smooth(x,window_len=25,window='flat'):
+
+# ---------smooth Function
+def smooth(x, window_len=25, window='flat'):
     if x.ndim != 1:
-        raise ValueError, "smooth only accepts 1 dimension arrays."
+        raise ValueError("smooth only accepts 1 dimension arrays.")
 
     if x.size < window_len:
-        raise ValueError, "Input vector needs to be bigger than window size."
+        raise ValueError("Input vector needs to be bigger than window size.")
 
-
-    if window_len<3:
+    if window_len < 3:
         return x
 
-
     if not window in ['flat', 'hanning', 'hamming', 'bartlett', 'blackman']:
-        raise ValueError, "Window is on of 'flat', 'hanning', 'hamming', 'bartlett', 'blackman'"
+        raise ValueError("Window is on of 'flat', 'hanning', 'hamming', 'bartlett', 'blackman'")
 
-
-    s=numpy.r_[x[window_len-1:0:-1],x,x[-2:-window_len-1:-1]]
-    #print(len(s))
-    if window == 'flat': #moving average
-        w=numpy.ones(window_len,'d')
+    s = np.r_[x[window_len - 1:0:-1], x, x[-2:-window_len - 1:-1]]
+    # print(len(s))
+    if window == 'flat':  # moving average
+        w = np.ones(window_len, 'd')
     else:
-        w=eval('numpy.'+window+'(window_len)')
+        w = eval('np.' + window + '(window_len)')
 
-    y=numpy.convolve(w/w.sum(),s,mode='valid')
+    y = np.convolve(w / w.sum(), s, mode='valid')
     return y
+
 
 class Brain:
     train_queue = [[], [], [], [], []]  # s, a, r, s', s' terminal mask
@@ -124,12 +126,12 @@ class Brain:
         advantage = r_t - v
 
         loss_policy = - log_prob * \
-            tf.stop_gradient(advantage)									# maximize policy
+                      tf.stop_gradient(advantage)  # maximize policy
         # minimize value error
         loss_value = LOSS_V * tf.square(advantage)
         # maximize entropy (regularization)
         entropy = LOSS_ENTROPY * \
-            tf.reduce_sum(p * tf.log(p + 1e-10), axis=1, keep_dims=True)
+                  tf.reduce_sum(p * tf.log(p + 1e-10), axis=1, keep_dims=True)
 
         loss_total = tf.reduce_mean(loss_policy + loss_value + entropy)
 
@@ -146,7 +148,7 @@ class Brain:
         with self.lock_queue:
             # more thread could have passed without lock
             if len(self.train_queue[0]) < MIN_BATCH:
-                return 									# we can't yield inside lock
+                return  # we can't yield inside lock
 
             s, a, r, s_, s_mask = self.train_queue
             self.train_queue = [[], [], [], [], []]
@@ -158,7 +160,7 @@ class Brain:
         s_mask = np.vstack(s_mask)
 
         if len(s) > 5 * MIN_BATCH:
-            print("Optimizer alert! Minimizing batch of %d" % len(s))
+            print(("Optimizer alert! Minimizing batch of %d" % len(s)))
 
         v = self.predict_v(s_)
         r = r + GAMMA_N * v * s_mask  # set v to 0 where s_ is terminal state
@@ -193,13 +195,15 @@ class Brain:
         with self.default_graph.as_default():
             p, v = self.model.predict(s)
             return v
+
     def load(self, name):
         self.model.load_weights(name)
 
     def save(self, name):
         self.model.save_weights(name)
 
-#---------
+
+# ---------
 frames = 0
 
 
@@ -213,7 +217,7 @@ class Agent:
         self.R = 0.
 
     def getEpsilon(self):
-        if(frames >= self.eps_steps):
+        if (frames >= self.eps_steps):
             return self.eps_end
         else:
             # linearly interpolate
@@ -271,7 +275,8 @@ class Agent:
 
     # possible edge case - if an episode ends in <N steps, the computation is incorrect
 
-#---------
+
+# ---------
 
 
 class Environment(threading.Thread):
@@ -311,7 +316,7 @@ class Environment(threading.Thread):
                 break
         self.rewards.append(R)
         end = time.time()
-        print("Reward: {}, time: {} s, Iterations: {}".format(R, end - start, iterations))
+        print(("Reward: {}, time: {} s, Iterations: {}".format(R, end - start, iterations)))
 
     def run(self):
         while not self.stop_signal:
@@ -323,7 +328,8 @@ class Environment(threading.Thread):
     def get_reward(self):
         return self.rewards
 
-#---------
+
+# ---------
 
 
 class Optimizer(threading.Thread):
@@ -340,7 +346,7 @@ class Optimizer(threading.Thread):
         self.stop_signal = True
 
 
-#-- main
+# -- main
 env_test = Environment(render=False, eps_start=0.001, eps_end=0.)
 NUM_STATE = env_test.env.observation_space.shape[0]
 NUM_ACTIONS = env_test.env.action_space.n
@@ -369,11 +375,11 @@ for o in opts:
 for o in opts:
     o.join()
 
-#Visualize
-for e in envs:
+# Visualize
+for i, e in enumerate(envs):
     r = e.get_reward()
     r = smooth(np.array(r))
-    plt.plot(xrange(len(r)),r)
+    plt.plot(range(len(r)), r)
     plt.legend([str(i)], loc='upper left')
 plt.xlabel("Episode")
 plt.ylabel("Reward")

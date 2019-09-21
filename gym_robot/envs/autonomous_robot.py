@@ -1,6 +1,6 @@
 import gym
 from gym import spaces
-from obstacles import Robot, Obstacle
+from .obstacles import Robot, Obstacle
 import numpy as np
 import random
 try:
