@@ -6,13 +6,13 @@ from keras.models import Sequential, Model
 from keras.layers import Dense, Activation, Flatten, Input, merge
 from keras.layers.merge import concatenate
 from keras.optimizers import Adam
-import gym_robot
+import gym_ultrasonic
 from rl.agents import DDPGAgent
 from rl.memory import SequentialMemory
 from rl.random import OrnsteinUhlenbeckProcess
 from rl.callbacks import FileLogger
 
-ENV_NAME = 'AutonomousRobot-v1'
+ENV_NAME = 'UltrasonicServo-v0'
 gym.undo_logger_setup()
 
 
