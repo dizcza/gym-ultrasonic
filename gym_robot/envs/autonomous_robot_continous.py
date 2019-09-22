@@ -179,13 +179,3 @@ class AutonomousRobotC(gym.Env):
             self.robottrans.set_translation(x, y)
             self.robottrans.set_rotation(rot * np.pi / 180)
             return self.viewer.render()
-
-    def create_environment(self):
-        robot = rendering.FilledPolygon(self.robot.get_drawing())
-        cast = rendering.make_circle(2,)
-        start = rendering.make_circle(3)
-        obs = rendering.FilledPolygon(self.obstacle.get_drawing())
-        self.obtrans = rendering.Transform()
-        self.casttrans = rendering.Transform()
-        self.starttrans = rendering.Transform()
-        self.robottrans = rendering.Transform()

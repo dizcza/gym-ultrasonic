@@ -18,7 +18,7 @@ gym.undo_logger_setup()
 
 # Get the environment and extract the number of actions.
 env = gym.make(ENV_NAME)
-#env = wrappers.Monitor(env, "./tmp/gym-results")
+# env = wrappers.Monitor(env, "./tmp/gym-results", force=True)
 nb_actions = env.action_space.shape[0]
 print(nb_actions)
 
@@ -70,7 +70,7 @@ callbacks = [FileLogger(log_filename, interval=25)]
 # agent.load_weights('ddpg_{}_random_pos_weights.h5f'.format(ENV_NAME))
 
 # Training
-agent.fit(env, nb_steps=1000000, visualize=False, verbose=2,
+agent.fit(env, nb_steps=1000, visualize=False, verbose=2,
           nb_max_episode_steps=1000, callbacks=callbacks)
 
 # save the  weights.
