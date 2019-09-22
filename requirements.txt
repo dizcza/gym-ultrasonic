@@ -3,3 +3,5 @@ keras-rl
 matplotlib
 numpy
 gym
+shapely[vectorized]
+cython  # for shapely speedups

@@ -2,6 +2,7 @@ import unittest2 as unittest
 from shapely.geometry import Polygon
 from .obstacles import Robot, Obstacle
 import numpy as np
+from numpy.testing import assert_array_almost_equal
 
 
 class TestRobotMethods(unittest.TestCase):
@@ -9,17 +10,11 @@ class TestRobotMethods(unittest.TestCase):
     def setUp(self):
         self.robot = Robot([300, 300], 50, 30)
 
-    def test_turn_left(self):
-        currentAngle = self.robot.get_rotation()
-        self.robot.turn_left()
-        self.assertEquals(self.robot.get_rotation(),
-                          currentAngle + self.robot.turn_speed)
-
-    def test_turn_right(self):
-        currentAngle = self.robot.get_rotation()
-        self.robot.turn_right()
-        self.assertEquals(self.robot.get_rotation(),
-                          currentAngle - self.robot.turn_speed)
+    def test_turn(self):
+        curr_angle = self.robot.angle
+        angle_turn = 20
+        self.robot.turn(angle_turn)
+        self.assertAlmostEqual(self.robot.angle, curr_angle + angle_turn / 2)
 
     def test_move_forward_straight(self):
         self.robot.angle = 0
@@ -27,17 +22,16 @@ class TestRobotMethods(unittest.TestCase):
         pos = self.robot.get_position()
         self.robot.move_forward()
         pos[0] = pos[0] + 1
-        self.assertEquals(self.robot.get_postion(), pos)
+        assert_array_almost_equal(self.robot.get_position(), pos)
 
     def test_move_forward_angle(self):
         self.robot.angle = 45
         self.robot.speed = 1
         pos = self.robot.get_position()
         self.robot.move_forward()
-        increment = 0.5**0.5
-        pos[0] = pos[0] + increment
-        pos[1] = pos[1] + increment
-        self.assertEquals(self.robot.get_postion(), pos)
+        increment = 0.5 ** 0.5
+        pos += increment
+        assert_array_almost_equal(self.robot.get_position(), pos)
 
     def test_collision(self):
         obstacle = Obstacle([350, 350], 150, 150)
@@ -117,7 +111,7 @@ class TestRobotMethods(unittest.TestCase):
         self.robot.angle = 0
         obstacle = Obstacle([300, 400], 50, 50)
         s = self.robot.infraredSensor([obstacle])
-        self.assertEqual(s, 4000)
+        self.assertEqual(s, 3)
 
 
 if __name__ == '__main__':

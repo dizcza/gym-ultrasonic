@@ -70,12 +70,11 @@ callbacks = [FileLogger(log_filename, interval=25)]
 # agent.load_weights('ddpg_{}_random_pos_weights.h5f'.format(ENV_NAME))
 
 # Training
-agent.fit(env, nb_steps=1000, visualize=False, verbose=2,
+agent.fit(env, nb_steps=1000, visualize=1, verbose=2,
           nb_max_episode_steps=1000, callbacks=callbacks)
 
 # save the  weights.
-agent.save_weights('ddpg_{}_random_pos_weights.h5f'.format(
-    ENV_NAME), overwrite=True)
+# agent.save_weights('ddpg_{}_random_pos_weights.h5f'.format(ENV_NAME), overwrite=True)
 
 # test
 agent.test(env, nb_episodes=10, visualize=True, nb_max_episode_steps=1000)
