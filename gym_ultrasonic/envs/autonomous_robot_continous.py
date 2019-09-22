@@ -52,13 +52,9 @@ class UltrasonicServoEnv(gym.Env):
         self.viewer = None
         self.state = None
 
-        self._reset()
-        self._configure()
+        self.reset()
 
-    def _configure(self, display=None):
-        self.display = display
-
-    def _step(self, action):
+    def step(self, action):
 
         # multiply since output of neural net is [-1,1] and this would be too slow
         action = action * 3
@@ -82,7 +78,7 @@ class UltrasonicServoEnv(gym.Env):
         reward = -2 + action[0] - np.abs(action[1] / 2)
         return reward, False
 
-    def _reset(self):
+    def reset(self):
         self.state = np.zeros(2,)
         # x
         #x = 200
@@ -95,13 +91,14 @@ class UltrasonicServoEnv(gym.Env):
         self.robot.angle = a
         for obs in self.obstacles:
             if self.robot.collision(obs):
-                self._reset()
+                self.reset()
                 break
         return np.copy(self.state)
 
-    def _render(self, mode='human', close=False):
+    def render(self, mode='human', close=False):
         if renderingAvailable:
             if close:
+                # todo: remove close
                 if self.viewer is not None:
                     self.viewer.close()
                     self.viewer = None
@@ -109,7 +106,7 @@ class UltrasonicServoEnv(gym.Env):
 
             if self.viewer is None:
                 self.viewer = rendering.Viewer(
-                    self.width, self.height, display=self.display)
+                    self.width, self.height)
 
                 robot = rendering.FilledPolygon(self.robot.get_drawing())
                 c1 = rendering.make_circle(2)

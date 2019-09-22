@@ -13,7 +13,7 @@ from rl.random import OrnsteinUhlenbeckProcess
 from rl.callbacks import FileLogger
 
 ENV_NAME = 'UltrasonicServo-v0'
-gym.undo_logger_setup()
+# gym.undo_logger_setup()
 
 
 # Get the environment and extract the number of actions.
