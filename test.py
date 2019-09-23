@@ -1,6 +1,6 @@
 import unittest2 as unittest
 from shapely.geometry import Polygon
-from .obstacles import Robot, Obstacle
+from gym_ultrasonic.envs.obstacle import Robot, Obstacle
 import numpy as np
 from numpy.testing import assert_array_almost_equal
 
@@ -18,17 +18,15 @@ class TestRobotMethods(unittest.TestCase):
 
     def test_move_forward_straight(self):
         self.robot.angle = 0
-        self.robot.speed = 1
         pos = self.robot.get_position()
-        self.robot.move_forward()
+        self.robot.move_forward(speed=1)
         pos[0] = pos[0] + 1
         assert_array_almost_equal(self.robot.get_position(), pos)
 
     def test_move_forward_angle(self):
         self.robot.angle = 45
-        self.robot.speed = 1
         pos = self.robot.get_position()
-        self.robot.move_forward()
+        self.robot.move_forward(speed=1)
         increment = 0.5 ** 0.5
         pos += increment
         assert_array_almost_equal(self.robot.get_position(), pos)

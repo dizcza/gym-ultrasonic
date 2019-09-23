@@ -15,26 +15,20 @@ if not speedups.enabled:
 
 class Obstacle:
     def __init__(self, position, width, height, angle=0):
-        # todo use polygons
         self.position = np.array(position, dtype=np.float32)
         self.width = width
         self.angle = angle
         self.height = height
 
     @property
-    def polygon_parallel(self):
-        return Polygon(self.get_drawing_static_position())
+    def polygon(self):
+        coords = np.add(self.get_polygon_parallel_coords(), self.position)
+        polygon_parallel = Polygon(coords)
+        return affinity.rotate(polygon_parallel, self.angle)
 
-    @property
-    def polygon_rotated(self):
-        return self.polygon_parallel.minimum_rotated_rectangle
-
-    def get_drawing(self):
+    def get_polygon_parallel_coords(self):
         l, r, t, b = -self.width / 2, self.width / 2, self.height / 2, -self.height / 2
-        return np.array([(l, b), (l, t), (r, t), (r, b)])
-
-    def get_drawing_static_position(self):
-        return self.get_drawing() + self.position
+        return [(l, b), (l, t), (r, t), (r, b)]
 
     def get_position(self):
         return np.array(self.position)
@@ -43,12 +37,8 @@ class Obstacle:
 class Robot(Obstacle):
     def __init__(self, position, width, height, angle=0):
         Obstacle.__init__(self, position, width, height, angle=angle)
-        self.speed = 2.5
 
-    def move_forward(self):
-        self.move_forward_speed(speed=self.speed)
-
-    def move_forward_speed(self, speed: float):
+    def move_forward(self, speed):
         angle_rad = math.radians(self.angle)
         vec = [np.cos(angle_rad), np.sin(angle_rad)]
         vec = np.multiply(vec, speed)
@@ -59,7 +49,7 @@ class Robot(Obstacle):
 
     def collision(self, obj) -> bool:
         if isinstance(obj, Obstacle):
-            ret = self.polygon_rotated.intersects(obj.polygon_rotated)
+            ret = self.polygon.intersects(obj.polygon)
             return ret
         else:
             # iterable
@@ -83,7 +73,7 @@ class Robot(Obstacle):
             translated_zones.append(z)
 
         for obj in obstacles:
-            polygon_rotated = obj.polygon_rotated
+            polygon_rotated = obj.polygon
 
             if translated_zones[0].intersects(polygon_rotated):
                 return 0  # 1695  # Center
@@ -110,22 +100,22 @@ class Robot(Obstacle):
         return mins, interections, start[1]
 
     # returns distance to nearest object
-    def rayCast(self, obstacles, dirAngle=0, vec_range=255):
+    def rayCast(self, obstacles, angle=0, max_dist=255):
         # relative position of ultrasonic sensor
-        angleInRad = (self.angle + dirAngle) * np.pi / 180
-        dirVec = np.array([np.cos(angleInRad), np.sin(angleInRad)])
-        posRot = np.add(dirVec * self.width / 2, self.get_position())
-        direction = dirVec * vec_range
+        angle = math.radians(self.angle + angle)
+        vec_direction = np.array([np.cos(angle), np.sin(angle)])
+        posRot = np.add(vec_direction * self.width / 2, self.position)
+        direction = vec_direction * max_dist
         p2 = posRot + direction
         line = LineString([posRot, p2])
-        minimum = vec_range
+        minimum = max_dist
         min_intersection = [0, 0]
 
         for obj in obstacles:
-            obj_pol = obj.polygon_rotated
+            obj_pol = obj.polygon
             intersection = obj_pol.intersection(line)
-            if type(intersection) is LineString:
-                intersection = list(obj_pol.intersection(line).coords)
+            if isinstance(intersection, LineString):
+                intersection = list(intersection.coords)
                 distances = np.linalg.norm(intersection - posRot, axis=1)
                 index = np.argmin(distances)
                 length = distances[index]

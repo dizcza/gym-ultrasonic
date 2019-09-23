@@ -1,1 +1,1 @@
-from gym_ultrasonic.envs.autonomous_robot_continous import UltrasonicServoEnv
+from gym_ultrasonic.envs.ultrasonic_servo_env import UltrasonicServoEnv
