@@ -1,10 +1,9 @@
 import math
+
 import gym
 import numpy as np
 from gym import spaces
 from gym.envs.classic_control import rendering
-from shapely import affinity
-from shapely.geometry import Polygon
 
 from .obstacle import Robot, Obstacle
 
@@ -51,26 +50,61 @@ class UltrasonicServoEnv(gym.Env):
         self.reset()
 
     def step(self, action):
-        # multiply since output of neural net is [-1,1] and this would be too slow
-        action = action * 3
-        # todo move 3 to speed factor
-        # Exectue continous actions
-        self.robot.move_forward(speed=action[0])
-        self.robot.turn(action[1])
-        reward, done = self.reward(action)
+        """
+        Make a single step of:
+            1) moving forward with the speed `action[0]`;
+            2) rotating by `action[1]` degrees.
+        Parameters
+        ----------
+        action: list
+            Speed and angle actions for the next step.
+
+        Returns
+        -------
+        observation: List[float]
+            A list that contains one value - min dist to an obstacle, if any, on its way.
+        reward: float
+            A reward, obtained by taking this `action`.
+        done: bool
+            Whether the episode has ended.
+        info: dict
+            An empty dict. Unused.
+        """
+        speed_move, angle_turn = action
+        self.robot.move_forward(speed=speed_move)
+        self.robot.turn(angle_turn)
+        reward, done = self.reward(speed_move, angle_turn)
         # central ultrasonic sensor distance
-        min_dist, _ = self.robot.rayCast(self.obstacles)
+        min_dist, _ = self.robot.ray_cast(self.obstacles, angle_target=0)
         self.state = [min_dist]
         info = {}
         return self.state, reward, done, info
 
-    def reward(self, action):
+    def reward(self, speed_move, angle_turn):
+        """
+        Parameters
+        ----------
+        speed_move: float
+            Move with this `speed_move`.
+        angle_turn: float
+            Turn by this `angle_turn` degrees.
+
+        Returns
+        -------
+        reward: float
+            A reward, obtained by applying these steps.
+        done: bool
+            Whether the robot collided with an obstacle.
+        """
         if self.robot.collision(self.obstacles):
             return -500, True
-        reward = -2 + action[0] - np.abs(action[1] / 2)
+        reward = -2 + speed_move - np.abs(angle_turn)
         return reward, False
 
     def reset(self):
+        """
+        Resets the state and spawns a new robot position.
+        """
         self.state = [0.]
         self.robot.reset(box=self.allowed_space)
         while self.robot.collision(self.obstacles):
@@ -78,6 +112,9 @@ class UltrasonicServoEnv(gym.Env):
         return self.state
 
     def init_view(self):
+        """
+        Initializes the Viewer (for displaying purpose only).
+        """
         self.viewer = rendering.Viewer(self.width, self.height)
         robot_view = rendering.FilledPolygon(self.robot.get_polygon_parallel_coords())
         robot_view.add_attr(self.robot_transform)
@@ -103,11 +140,19 @@ class UltrasonicServoEnv(gym.Env):
         self.viewer.add_geom(sensor_view)
 
     def render(self, mode='human'):
+        """
+        Renders the screen, robot, and obstacles.
+
+        Parameters
+        ----------
+        mode: str
+            The mode to render with.
+        """
         if self.viewer is None:
             self.init_view()
 
         for sensor_transform, sensor_angle in zip(self.sensor_transforms, self.robot.ultrasonic_sensor_angles):
-            _, intersection_xy = self.robot.rayCast(self.obstacles, angle_target=sensor_angle)
+            _, intersection_xy = self.robot.ray_cast(self.obstacles, angle_target=sensor_angle)
             sensor_transform.set_translation(*intersection_xy)
 
         self.robot_transform.set_translation(*self.robot.position)

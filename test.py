@@ -14,22 +14,22 @@ class TestRobotMethods(unittest.TestCase):
         curr_angle = self.robot.angle
         angle_turn = 20
         self.robot.turn(angle_turn)
-        self.assertAlmostEqual(self.robot.angle, curr_angle + angle_turn / 2)
+        self.assertAlmostEqual(self.robot.angle, curr_angle + angle_turn)
 
     def test_move_forward_straight(self):
         self.robot.angle = 0
-        pos = self.robot.get_position()
+        pos = np.copy(self.robot.position)
         self.robot.move_forward(speed=1)
         pos[0] = pos[0] + 1
-        assert_array_almost_equal(self.robot.get_position(), pos)
+        assert_array_almost_equal(self.robot.position, pos)
 
     def test_move_forward_angle(self):
         self.robot.angle = 45
-        pos = self.robot.get_position()
+        pos = np.copy(self.robot.position)
         self.robot.move_forward(speed=1)
         increment = 0.5 ** 0.5
         pos += increment
-        assert_array_almost_equal(self.robot.get_position(), pos)
+        assert_array_almost_equal(self.robot.position, pos)
 
     def test_collision(self):
         obstacle = Obstacle([350, 350], 150, 150)
@@ -62,38 +62,20 @@ class TestRobotMethods(unittest.TestCase):
         obstacle = Obstacle([500, 500], 30, 30)
         self.assertFalse(self.robot.collision(obstacle))
 
-    def test_line_intersect3(self):
-        p1 = [0, 0]
-        p2 = [4, 4]
-        p3 = [4, 0]
-        p4 = [0, 4]
-        intersection = np.array([2, 2])
-
-        self.assertEqual(self.robot.intersects(
-            p1, p2, p3, p4).all(), intersection.all())
-
-    def test_line_intersect4(self):
-        p1 = [1, 1]
-        p2 = [4, 4]
-        p3 = [4, 0]
-        p4 = [0, 4]
-        intersection = np.array([2, 2])
-        self.assertEqual(self.robot.intersects(
-            p2, p1, p4, p3).all(), intersection.all())
-
     def test_ray_casting(self):
         self.robot = Robot([300, 300], 50, 50)
         self.robot.angle = 0
         obstacle = Obstacle([400, 300], 50, 50)
-        r, p = self.robot.rayCast([obstacle])
-        self.assertEqual(r, 50.0)
+        min_dist, p_xy = self.robot.ray_cast([obstacle], angle_target=0)
+        self.assertEqual(min_dist, 50.0)
+        assert_array_almost_equal(p_xy, [375, 300])
 
     def test_ray_casting_nohit(self):
         self.robot = Robot([300, 300], 50, 50)
         self.robot.angle = 0
         obstacle = Obstacle([300, 400], 50, 50)
-        r, p = self.robot.rayCast([obstacle])
-        self.assertEqual(r, 255)
+        min_dist, _ = self.robot.ray_cast([obstacle], angle_target=0)
+        self.assertEqual(min_dist, 255)
 
     def test_coll_rotated(self):
         v1 = [[425.643330675622, 247.83978898773091], [425.643330675622, 277.83978898773091], [
