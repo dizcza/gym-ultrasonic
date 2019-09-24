@@ -37,6 +37,7 @@ class Obstacle:
 class Robot(Obstacle):
     def __init__(self, position, width, height, angle=0):
         Obstacle.__init__(self, position, width, height, angle=angle)
+        self.ultrasonic_sensor_angles = [-20, 0, 20]
 
     def move_forward(self, speed):
         angle_rad = math.radians(self.angle)
@@ -83,46 +84,39 @@ class Robot(Obstacle):
                 return 1  # 2086  # Right
         return 3  # 4000  # Clear
 
-    # single Ultrasonicsensor
-    def singleUsSensors(self, obstacles):
-        mins, interections, start = self.rayCast(obstacles)
-        return mins, interections, start
+    @property
+    def direction_vector(self):
+        return np.array([np.cos(self.angle), np.sin(self.angle)])
 
-    def usSensors(self, obstacles):
-        # three Ultrasonic sensors
-        us_angles = [-20, 0, 20]
-        mins = [0, 0, 0]
-        interections = [0, 0, 0]
-        start = [0, 0, 0]
-        for i in range(len(us_angles)):
-            mins[i], interections[i], start[i] = self.rayCast(
-                obstacles, us_angles[i])
-        return mins, interections, start[1]
+    @property
+    def sensor_position(self):
+        """
+        :return: Ultrasonic sensor position in world coordinates, (x, y)
+        """
+        return self.position + self.direction_vector * (self.width / 2)
 
     # returns distance to nearest object
-    def rayCast(self, obstacles, angle=0, max_dist=255):
+    def rayCast(self, obstacles, angle_target=0, max_dist=255):
         # relative position of ultrasonic sensor
-        angle = math.radians(self.angle + angle)
-        vec_direction = np.array([np.cos(angle), np.sin(angle)])
-        posRot = np.add(vec_direction * self.width / 2, self.position)
-        direction = vec_direction * max_dist
-        p2 = posRot + direction
-        line = LineString([posRot, p2])
-        minimum = max_dist
-        min_intersection = [0, 0]
+        sensor_pos = self.sensor_position
+        angle_target = math.radians(self.angle + angle_target)
+        target_direction = np.array([np.cos(angle_target), np.sin(angle_target)])
+        ray_cast = LineString([sensor_pos, sensor_pos + target_direction * max_dist])
+        min_dist = max_dist
+        intersection_xy = [-max_dist, -max_dist]  # hide from a drawing screen
 
         for obj in obstacles:
             obj_pol = obj.polygon
-            intersection = obj_pol.intersection(line)
+            intersection = obj_pol.intersection(ray_cast)
             if isinstance(intersection, LineString):
-                intersection = list(intersection.coords)
-                distances = np.linalg.norm(intersection - posRot, axis=1)
-                index = np.argmin(distances)
-                length = distances[index]
-                if length < minimum:
-                    minimum = length
-                    min_intersection = np.array(intersection[index])
-        return minimum, min_intersection, posRot
+                intersection_coords = np.array(intersection.coords)
+                distances = np.linalg.norm(intersection_coords - sensor_pos, axis=1)
+                argmin = distances.argmin()
+                dist = distances[argmin]
+                if dist < min_dist:
+                    min_dist = dist
+                    intersection_xy = intersection_coords[argmin]
+        return min_dist, intersection_xy
 
     def intersects(self, rayOrigin, rayDirection, p1, p2):
         rayOrigin = np.array(rayOrigin, dtype=np.float)

@@ -85,14 +85,14 @@ class TestRobotMethods(unittest.TestCase):
         self.robot = Robot([300, 300], 50, 50)
         self.robot.angle = 0
         obstacle = Obstacle([400, 300], 50, 50)
-        r, p, p2 = self.robot.rayCast([obstacle])
+        r, p = self.robot.rayCast([obstacle])
         self.assertEqual(r, 50.0)
 
     def test_ray_casting_nohit(self):
         self.robot = Robot([300, 300], 50, 50)
         self.robot.angle = 0
         obstacle = Obstacle([300, 400], 50, 50)
-        r, p, p2 = self.robot.rayCast([obstacle])
+        r, p = self.robot.rayCast([obstacle])
         self.assertEqual(r, 255)
 
     def test_coll_rotated(self):

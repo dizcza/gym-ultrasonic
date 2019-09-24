@@ -47,7 +47,7 @@ class UltrasonicServoEnv(gym.Env):
 
         # rendering
         self.viewer = None
-        self.cast_trans = []
+        self.sensor_transforms = []
         self.robot_trans = rendering.Transform()
 
         self.reset()
@@ -61,10 +61,11 @@ class UltrasonicServoEnv(gym.Env):
         self.robot.turn(action[1])
         reward, done = self.reward(action)
 
-        min, p, p = self.robot.singleUsSensors(self.obstacles)
+        # central ultrasonic sensor distance
+        min_dist, _ = self.robot.rayCast(self.obstacles)
         infrared = self.robot.infraredSensor(self.obstacles)
 
-        self.state = [min, infrared]
+        self.state = [min_dist, infrared]
         return np.copy(self.state), reward, done, {}
 
     def reward(self, action):
@@ -87,9 +88,9 @@ class UltrasonicServoEnv(gym.Env):
             robot_view.add_attr(self.robot_trans)
 
             for sensor_id in range(3):
-                circle = rendering.make_circle(radius=5)
+                circle = rendering.make_circle(radius=10)
                 cast_trans = rendering.Transform()
-                self.cast_trans.append(cast_trans)
+                self.sensor_transforms.append(cast_trans)
                 circle.add_attr(cast_trans)
                 circle.set_color(1, 0, 0)
                 self.viewer.add_geom(circle)
@@ -106,10 +107,9 @@ class UltrasonicServoEnv(gym.Env):
             self.viewer.add_geom(robot_view)
             self.viewer.add_geom(sensor_view)
 
-        min, points, pos = self.robot.usSensors(self.obstacles)
-        self.cast_trans[0].set_translation(points[1][0], points[1][1])
-        self.cast_trans[1].set_translation(points[0][0], points[0][1])
-        self.cast_trans[2].set_translation(points[2][0], points[2][1])
+        for sensor_transform, sensor_angle in zip(self.sensor_transforms, self.robot.ultrasonic_sensor_angles):
+            _, intersection_xy = self.robot.rayCast(self.obstacles, angle_target=sensor_angle)
+            sensor_transform.set_translation(*intersection_xy)
 
         self.robot_trans.set_translation(*self.robot.position)
         self.robot_trans.set_rotation(math.radians(self.robot.angle))
