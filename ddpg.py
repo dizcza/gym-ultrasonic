@@ -1,30 +1,26 @@
-import numpy as np
 import gym
-from gym import wrappers
-from datetime import datetime
-from keras.models import Sequential, Model
-from keras.layers import Dense, Activation, Flatten, Input, merge
+from keras.layers import Dense, Activation, Flatten, Input
 from keras.layers.merge import concatenate
+from keras.models import Sequential, Model
 from keras.optimizers import Adam
-import gym_ultrasonic
 from rl.agents import DDPGAgent
 from rl.memory import SequentialMemory
 from rl.random import OrnsteinUhlenbeckProcess
-from rl.callbacks import FileLogger
+
+import gym_ultrasonic
 
 ENV_NAME = 'UltrasonicServo-v0'
-# gym.undo_logger_setup()
-
 
 # Get the environment and extract the number of actions.
 env = gym.make(ENV_NAME)
 # env = wrappers.Monitor(env, "./tmp/gym-results", force=True)
 nb_actions = env.action_space.shape[0]
-print(nb_actions)
+
+observation_space_input_shape = (1,) + env.observation_space.shape
 
 # model with actor and critic
 actor = Sequential()
-actor.add(Flatten(input_shape=(1,) + env.observation_space.shape))
+actor.add(Flatten(input_shape=observation_space_input_shape))
 actor.add(Dense(8))
 actor.add(Activation('relu'))
 actor.add(Dense(8))
@@ -36,8 +32,7 @@ actor.add(Activation('tanh'))
 print(actor.summary())
 
 action_input = Input(shape=(nb_actions,), name='action_input')
-observation_input = Input(
-    shape=(1,) + env.observation_space.shape, name='observation_input')
+observation_input = Input(shape=observation_space_input_shape, name='observation_input')
 flattened_observation = Flatten()(observation_input)
 x = concatenate([action_input, flattened_observation])
 x = Dense(16)(x)
@@ -61,20 +56,10 @@ agent = DDPGAgent(nb_actions=nb_actions, actor=actor, critic=critic, critic_acti
 agent.compile(Adam(lr=.001), metrics=['mse'])
 
 
-# logging
-date = str(datetime.now())
-log_filename = './logs/ddpg_{}_{}_log.json'.format(ENV_NAME, date)
-callbacks = [FileLogger(log_filename, interval=25)]
+agent.fit(env, nb_steps=300, visualize=True, verbose=2, nb_max_episode_steps=1000)
 
-# load weights if needed
-# agent.load_weights('ddpg_{}_random_pos_weights.h5f'.format(ENV_NAME))
-
-# Training
-agent.fit(env, nb_steps=300, visualize=1, verbose=2,
-          nb_max_episode_steps=1000, callbacks=callbacks)
-
-# save the  weights.
-# agent.save_weights('ddpg_{}_random_pos_weights.h5f'.format(ENV_NAME), overwrite=True)
+# save the weights
+# agent.save_weights('ddpg_{}_weights.h5f'.format(ENV_NAME), overwrite=True)
 
 # test
 agent.test(env, nb_episodes=10, visualize=True, nb_max_episode_steps=1000)

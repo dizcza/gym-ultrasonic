@@ -1,8 +1,9 @@
-import unittest2 as unittest
-from shapely.geometry import Polygon
-from gym_ultrasonic.envs.obstacle import Robot, Obstacle
 import numpy as np
+import unittest2 as unittest
 from numpy.testing import assert_array_almost_equal
+from shapely.geometry import Polygon
+
+from gym_ultrasonic.envs.obstacle import Robot, Obstacle
 
 
 class TestRobotMethods(unittest.TestCase):

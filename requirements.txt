@@ -1,7 +1,7 @@
-keras
-keras-rl
-matplotlib
+keras>=2.2.4
+keras-rl>=0.4.2
+#tensorflow>=1.14.0
 numpy
-gym
-shapely[vectorized]
+gym>=0.14.0
+shapely[vectorized]>=1.6.4
 cython  # for shapely speedups
