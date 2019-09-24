@@ -6,6 +6,7 @@ from keras.optimizers import Adam
 from rl.agents import DDPGAgent
 from rl.memory import SequentialMemory
 from rl.random import OrnsteinUhlenbeckProcess
+from keras.callbacks import TensorBoard
 
 import gym_ultrasonic
 
@@ -55,11 +56,12 @@ agent = DDPGAgent(nb_actions=nb_actions, actor=actor, critic=critic, critic_acti
                   random_process=random_process, gamma=.8, target_model_update=1e-3)
 agent.compile(Adam(lr=.001), metrics=['mse'])
 
+tensorboard = TensorBoard(log_dir="logs")
 
-agent.fit(env, nb_steps=300, visualize=True, verbose=2, nb_max_episode_steps=1000)
+agent.fit(env, nb_steps=3000, visualize=1, verbose=2, nb_max_episode_steps=1000, callbacks=[])
 
 # save the weights
 # agent.save_weights('ddpg_{}_weights.h5f'.format(ENV_NAME), overwrite=True)
 
 # test
-agent.test(env, nb_episodes=10, visualize=True, nb_max_episode_steps=1000)
+# agent.test(env, nb_episodes=10, visualize=True, nb_max_episode_steps=1000)

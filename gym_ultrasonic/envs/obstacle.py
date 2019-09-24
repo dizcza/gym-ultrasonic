@@ -70,7 +70,7 @@ class Robot(Obstacle):
             Robot's rotation angle in degrees.
         """
         Obstacle.__init__(self, position, width, height, angle=angle)
-        self.ultrasonic_sensor_angles = (-20, 0, 20)
+        self.ultrasonic_sensor_angles = (0,)
 
     def move_forward(self, speed):
         """
