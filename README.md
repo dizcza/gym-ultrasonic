@@ -1,9 +1,13 @@
 # OpenAI Gym Ultrasonic robot sensor environment
 
-![](images/one-sonar.png)
+![](https://travis-ci.org/NeuralEnsemble/elephant.png?branch=master "Unit Test Status")
+![](https://coveralls.io/repos/github/dizcza/gym-ultrasonic/badge.svg?branch=master "Coverage Status")
+![](https://readthedocs.org/projects/gym-ultrasonic/badge/?version=latest "Documentation Status")
+
+![](docs/images/one-sonar.png)
 
 ### Environment
-UltrasonicServo-v0 - Ultrasonic sensor (without moving servo for now), mounted on top of a robot (small red circle), heads forward.
+`UltrasonicServo-v0` (`AutonomousRobot-v1` in the [original repo](https://github.com/lelmac/robotsim)) - Ultrasonic sensor (without moving servo for now), mounted on top of a robot (small red circle), heads forward.
 
 ## Setup
 ```bash

@@ -2,7 +2,7 @@
 env/
 venv/
 dist/
-docs/_build/
+docs/build/
 logs/
 *.py[cod]
 *.egg-info/

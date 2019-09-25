@@ -15,6 +15,9 @@ def filled_polygon_from_obstacle(obstacle: Obstacle):
 
 class UltrasonicServoEnv(gym.Env):
     metadata = {'render.modes': ['human'], 'video.frames_per_second': 1}
+    action_space = spaces.Box(low=-3, high=3,
+                              shape=(2,))  # Forward/backward, left/right
+    observation_space = spaces.Box(low=0, high=255, shape=(1,))
 
     def __init__(self):
         super().__init__()
@@ -38,8 +41,6 @@ class UltrasonicServoEnv(gym.Env):
             Obstacle([100, 200], width=35, height=35, angle=45),
             *self.walls
         ]
-        self.action_space = spaces.Box(low=-3, high=3, shape=(2,))  # Forward/backward, left/right
-        self.observation_space = spaces.Box(low=0, high=255, shape=(1,))
         self.state = [0.]
 
         # rendering
@@ -54,9 +55,10 @@ class UltrasonicServoEnv(gym.Env):
         Make a single step of:
             1) moving forward with the speed `action[0]`;
             2) rotating by `action[1]` degrees.
+
         Parameters
         ----------
-        action: list
+        action: List[float]
             Speed and angle actions for the next step.
 
         Returns
@@ -82,6 +84,8 @@ class UltrasonicServoEnv(gym.Env):
 
     def reward(self, speed_move, angle_turn):
         """
+        Computes the reward.
+
         Parameters
         ----------
         speed_move: float
@@ -94,7 +98,7 @@ class UltrasonicServoEnv(gym.Env):
         reward: float
             A reward, obtained by applying these steps.
         done: bool
-            Whether the robot collided with an obstacle.
+            Whether the robot collided with an obstacle.rst.
         """
         if self.robot.collision(self.obstacles):
             return -500, True
