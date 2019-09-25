@@ -86,7 +86,6 @@ class TestRobotMethods(unittest.TestCase):
         p1 = Polygon(v1)
         p2 = Polygon(v2)
         self.assertTrue(p1.intersects(p2))
-        # self.assertFalse(linalg_helper.separating_axis_theorem(v1,v2))
 
 
 if __name__ == '__main__':
