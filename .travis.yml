@@ -1,0 +1,25 @@
+dist: xenial
+language: python
+sudo: false
+
+addons:
+   apt:
+     update: true
+
+
+matrix:
+  include:
+    - name: "pip 3.7"
+      python: 3.7
+
+
+install:
+  - pip -V
+  - pip install -r requirements.txt;
+  - pip install coverage coveralls nose
+  - pip list
+  - python --version
+
+script:
+  - nosetests --with-coverage --cover-package=gym_ultrasonic
+  - coveralls || echo "coveralls failed"

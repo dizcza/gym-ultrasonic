@@ -1,18 +1,11 @@
-*.py[cod]
+.idea/
 env/
 venv/
 dist/
-*.egg-info/
-
-# Sphinx documentation
 docs/_build/
-
-# PyBuilder
-target/
-
-# Jupyter Notebook
-*.ipynb_checkpoints
-
-.idea/
 logs/
+*.py[cod]
+*.egg-info/
+*.ipynb_checkpoints
 *.h5f
+.coverage

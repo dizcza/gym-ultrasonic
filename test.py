@@ -1,5 +1,6 @@
+import unittest
+
 import numpy as np
-import unittest2 as unittest
 from numpy.testing import assert_array_almost_equal
 from shapely.geometry import Polygon
 
