@@ -2,16 +2,14 @@ dist: xenial
 language: python
 sudo: false
 
-addons:
-   apt:
-     update: true
-
+before_install:
+  - sudo apt-get update
+  - sudo apt-get install -y libglu1-mesa xvfb
 
 matrix:
   include:
     - name: "pip 3.7"
       python: 3.7
-
 
 install:
   - pip -V
@@ -21,5 +19,5 @@ install:
   - python --version
 
 script:
-  - nosetests --with-coverage --cover-package=gym_ultrasonic
-  - coveralls || echo "coveralls failed"
+  - xvfb-run -s "-screen 0 1400x900x24" nosetests --with-coverage --cover-package=gym_ultrasonic
+  - coveralls
