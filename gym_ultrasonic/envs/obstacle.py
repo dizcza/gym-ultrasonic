@@ -131,7 +131,7 @@ class Robot(Obstacle):
         """
         return self.position + self.direction_vector * (self.width / 2)
 
-    def ray_cast(self, obstacles: List[Obstacle], angle_target: float, max_dist=255):
+    def ray_cast(self, obstacles, angle_target, max_dist=255):
         """
         Casts a ray at specific `angle_target` and checks if there an intersection with `obstacles`.
 
@@ -172,7 +172,7 @@ class Robot(Obstacle):
                     intersection_xy = intersection_coords[argmin]
         return min_dist, intersection_xy
 
-    def reset(self, box: Box):
+    def reset(self, box):
         """
         Sets the current position to a random point from a `box`.
 
