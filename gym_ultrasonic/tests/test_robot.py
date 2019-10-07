@@ -21,14 +21,14 @@ class TestRobotMethods(unittest.TestCase):
     def test_move_forward_straight(self):
         self.robot.angle = 0
         pos = np.copy(self.robot.position)
-        self.robot.move_forward(speed=1)
+        self.robot.move_forward(move_step=1)
         pos[0] = pos[0] + 1
         assert_array_almost_equal(self.robot.position, pos)
 
     def test_move_forward_angle(self):
         self.robot.angle = 45
         pos = np.copy(self.robot.position)
-        self.robot.move_forward(speed=1)
+        self.robot.move_forward(move_step=1)
         increment = 0.5 ** 0.5
         pos += increment
         assert_array_almost_equal(self.robot.position, pos)

@@ -4,6 +4,7 @@ venv/
 dist/
 docs/build/
 logs/
+ignored/
 *.py[cod]
 *.egg-info/
 *.ipynb_checkpoints

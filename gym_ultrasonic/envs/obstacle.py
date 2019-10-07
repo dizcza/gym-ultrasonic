@@ -56,7 +56,7 @@ class Obstacle:
 
 
 class Robot(Obstacle):
-    def __init__(self, position, width, height, angle=0):
+    def __init__(self, position, width, height, angle=0, speed=1.):
         """
         Parameters
         ----------
@@ -71,15 +71,17 @@ class Robot(Obstacle):
         """
         Obstacle.__init__(self, position, width, height, angle=angle)
         self.ultrasonic_sensor_angles = (0,)
+        self.speed = speed
 
-    def move_forward(self, speed):
+    def move_forward(self, move_step):
         """
         Parameters
         ----------
-        speed: float
-            Make a single step with this speed.
+        move_step: float
+            Move step, cm.
         """
-        vec = np.multiply(self.direction_vector, speed)
+        move_step *= self.speed
+        vec = np.multiply(self.direction_vector, move_step)
         self.position += vec
 
     def turn(self, angle_step):

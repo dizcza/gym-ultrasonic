@@ -13,8 +13,8 @@ class TestUltrasonicEnv(unittest.TestCase):
     def setUp(self):
         self.env = gym.make('UltrasonicServo-v0')
         self.env.reset()
-        # self.env.robot.position = np.array([300., 300.])
-        # self.env.robot.angle = 0
+        self.env.robot.position = np.divide([self.env.width, self.env.height], 2.)
+        self.env.robot.angle = 0
 
     def tearDown(self):
         self.env.close()
@@ -52,8 +52,8 @@ class TestUltrasonicEnv(unittest.TestCase):
         angle_target = math.degrees(angle_target)
         angle_turn = angle_target - self.env.robot.angle
         self.env.robot.turn(angle_turn)
-        speed = np.linalg.norm(vec_to_obstacle)
-        min_dist, reward, done, _ = self.env.step(action=(speed, 0))
+        dist_to_obstacle = np.linalg.norm(vec_to_obstacle)
+        min_dist, reward, done, _ = self.env.step(action=(dist_to_obstacle, 0))
         assert_array_almost_equal(min_dist, [0.], decimal=4)
         self.assertTrue(reward < 0)
         self.assertTrue(done)

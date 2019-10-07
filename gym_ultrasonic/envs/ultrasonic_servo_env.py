@@ -15,8 +15,11 @@ def filled_polygon_from_obstacle(obstacle: Obstacle):
 
 class UltrasonicServoEnv(gym.Env):
     metadata = {'render.modes': ['human'], 'video.frames_per_second': 1}
-    action_space = spaces.Box(low=-3, high=3,
-                              shape=(2,))  # Forward/backward, left/right
+
+    # vector move along main axis (mm), angle turn (degrees)
+    action_space = spaces.Box(low=-3, high=3, shape=(2,))
+
+    # dist to obstacle
     observation_space = spaces.Box(low=0, high=255, shape=(1,))
 
     def __init__(self):
@@ -30,7 +33,7 @@ class UltrasonicServoEnv(gym.Env):
         indent = wall_size + max(self.robot.width, self.robot.height)
         self.allowed_space = spaces.Box(low=indent, high=self.width - indent, shape=(2,))
 
-        self.walls = [
+        walls = [
             Obstacle([0, self.height / 2], wall_size, self.height),  # left wall
             Obstacle([self.width, self.height / 2], wall_size, self.height),  # right wall
             Obstacle([self.width / 2, self.height], self.width, wall_size),  # top wall
@@ -39,9 +42,9 @@ class UltrasonicServoEnv(gym.Env):
         self.obstacles = [
             Obstacle([500, 300], width=50, height=50),
             Obstacle([100, 200], width=35, height=35, angle=45),
-            *self.walls
+            *walls
         ]
-        self.state = [0.]
+        self.state = [0.]  # observation: min dist to obstacle
 
         # rendering
         self.viewer = None
@@ -72,10 +75,10 @@ class UltrasonicServoEnv(gym.Env):
         info: dict
             An empty dict. Unused.
         """
-        speed_move, angle_turn = action
-        self.robot.move_forward(speed=speed_move)
+        move_step, angle_turn = action
+        self.robot.move_forward(move_step)
         self.robot.turn(angle_turn)
-        reward, done = self.reward(speed_move, angle_turn)
+        reward, done = self.reward(move_step, angle_turn)
         # central ultrasonic sensor distance
         min_dist, _ = self.robot.ray_cast(self.obstacles, angle_target=0)
         self.state = [min_dist]
@@ -102,7 +105,7 @@ class UltrasonicServoEnv(gym.Env):
         """
         if self.robot.collision(self.obstacles):
             return -500, True
-        reward = -2 + speed_move - np.abs(angle_turn)
+        reward = -2 + speed_move - 3 * np.abs(angle_turn)
         return reward, False
 
     def reset(self):
