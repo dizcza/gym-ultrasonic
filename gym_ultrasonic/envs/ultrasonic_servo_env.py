@@ -1,4 +1,5 @@
 import math
+import random
 
 import gym
 import numpy as np
@@ -15,14 +16,16 @@ class UltrasonicServoEnv(gym.Env):
     action_space = spaces.Box(low=-3, high=3, shape=(2,))
 
     # dist to obstacle
-    observation_space = spaces.Box(low=0, high=255, shape=(1,))
+    observation_space = spaces.Box(low=0, high=2000, shape=(1,))
 
     def __init__(self):
         super().__init__()
-        self.width = self.height = 600
+        self.scale_down = 5
+        self.width = self.height = 3000 // self.scale_down
 
         # robot's position will be reset later on
-        self.robot = Robot([0, 0], width=40, height=25)
+        self.robot = Robot([0, 0], width=120 / self.scale_down, height=90 / self.scale_down, speed=3,
+                           sensor_max_dist=self.observation_space.high[0])
 
         wall_size = 10
         indent = wall_size + max(self.robot.width, self.robot.height)
@@ -34,11 +37,18 @@ class UltrasonicServoEnv(gym.Env):
             Obstacle([self.width / 2, self.height], self.width, wall_size),  # top wall
             Obstacle([self.width / 2, 0], self.width, wall_size)  # bottom wall
         ]
-        self.obstacles = [
-            Obstacle([500, 300], width=50, height=50),
-            Obstacle([100, 200], width=35, height=35, angle=45),
-            *walls
-        ]
+        self.obstacles = []
+
+        sample_obstacle_size = lambda: random.randint(self.robot.height // 2, self.robot.width * 3)
+
+        for random_obstacle_id in range(5):
+            obst = Obstacle(position=random.sample(range(self.width), k=2),
+                            width=sample_obstacle_size(),
+                            height=sample_obstacle_size(),
+                            angle=random.randint(0, 360))
+            self.obstacles.append(obst)
+        self.obstacles.extend(walls)
+
         self.state = [0.]  # observation: min dist to obstacle
 
         # rendering
@@ -122,14 +132,14 @@ class UltrasonicServoEnv(gym.Env):
         robot_view.add_attr(self.robot_transform)
 
         for sensor_id_unused in range(len(self.robot.ultrasonic_sensor_angles)):
-            circle = rendering.make_circle(radius=10)
+            circle = rendering.make_circle(radius=7)
             cast_trans = rendering.Transform()
             self.sensor_transforms.append(cast_trans)
             circle.add_attr(cast_trans)
             circle.set_color(1, 0, 0)
             self.viewer.add_geom(circle)
 
-        sensor_view = rendering.make_circle(3)
+        sensor_view = rendering.make_circle(radius=3)
         sensor_view.add_attr(rendering.Transform(translation=(self.robot.width / 2, 0)))
         sensor_view.add_attr(self.robot_transform)
         sensor_view.set_color(1, 0, 0)
@@ -150,6 +160,7 @@ class UltrasonicServoEnv(gym.Env):
         ----------
         mode: str
             The mode to render with.
+            Either 'human' or 'rgb_array'.
         """
         if self.viewer is None:
             self.init_view()

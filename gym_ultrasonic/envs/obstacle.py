@@ -56,7 +56,7 @@ class Obstacle:
 
 
 class Robot(Obstacle):
-    def __init__(self, position, width, height, angle=0, speed=1.):
+    def __init__(self, position, width, height, angle=0, speed=1., sensor_max_dist=2000):
         """
         Parameters
         ----------
@@ -72,6 +72,7 @@ class Robot(Obstacle):
         Obstacle.__init__(self, position, width, height, angle=angle)
         self.ultrasonic_sensor_angles = (0,)
         self.speed = speed
+        self.sensor_max_dist = sensor_max_dist
 
     def move_forward(self, move_step):
         """
@@ -133,7 +134,7 @@ class Robot(Obstacle):
         """
         return self.position + self.direction_vector * (self.width / 2)
 
-    def ray_cast(self, obstacles, angle_target, max_dist=255):
+    def ray_cast(self, obstacles, angle_target):
         """
         Casts a ray at specific `angle_target` and checks if there an intersection with `obstacles`.
 
@@ -143,8 +144,6 @@ class Robot(Obstacle):
             List of obstacles in the scene.
         angle_target: float
             Sensor angle to ray cast.
-        max_dist: float
-            Max dist a sensor can capture.
 
         Returns
         -------
@@ -157,9 +156,9 @@ class Robot(Obstacle):
         sensor_pos = self.sensor_position
         angle_target = math.radians(self.angle + angle_target)
         target_direction = np.array([np.cos(angle_target), np.sin(angle_target)])
-        ray_cast = LineString([sensor_pos, sensor_pos + target_direction * max_dist])
-        min_dist = max_dist
-        intersection_xy = [-max_dist, -max_dist]  # hide from a drawing screen
+        ray_cast = LineString([sensor_pos, sensor_pos + target_direction * self.sensor_max_dist])
+        min_dist = self.sensor_max_dist
+        intersection_xy = [-self.sensor_max_dist, -self.sensor_max_dist]  # hide from a drawing screen
 
         for obj in obstacles:
             obj_pol = obj.polygon

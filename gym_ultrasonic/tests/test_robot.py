@@ -77,7 +77,7 @@ class TestRobotMethods(unittest.TestCase):
         self.robot.angle = 0
         obstacle = Obstacle([300, 400], 50, 50)
         min_dist, _ = self.robot.ray_cast([obstacle], angle_target=0)
-        self.assertEqual(min_dist, 255)
+        self.assertEqual(min_dist, self.robot.sensor_max_dist)
 
     def test_coll_rotated(self):
         v1 = [[425.643330675622, 247.83978898773091], [425.643330675622, 277.83978898773091], [
