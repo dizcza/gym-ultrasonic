@@ -5,6 +5,7 @@ dist/
 docs/build/
 logs/
 ignored/
+capture/
 *.py[cod]
 *.egg-info/
 *.ipynb_checkpoints

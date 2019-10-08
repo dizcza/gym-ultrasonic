@@ -1,4 +1,4 @@
-import gym
+import gym.wrappers
 from keras.callbacks import TensorBoard
 from keras.layers import Dense, Flatten, Input, InputLayer
 from keras.layers.merge import concatenate
@@ -14,7 +14,7 @@ ENV_NAME = 'UltrasonicServo-v0'
 
 # Get the environment and extract the number of actions.
 env = gym.make(ENV_NAME)
-# env = wrappers.Monitor(env, "./tmp/gym-results", force=True)
+env = gym.wrappers.Monitor(env, "capture", force=True)
 nb_actions = env.action_space.shape[0]
 
 # see issue https://github.com/keras-rl/keras-rl/issues/160
@@ -41,7 +41,7 @@ x = Dense(1, activation='linear')(x)
 critic = Model(inputs=[action_input, observation_input], outputs=x, name='critic')
 print(critic.summary())
 
-# create dddpg agent
+# create ddpg agent
 memory = SequentialMemory(limit=1000000, window_length=1)
 random_process = OrnsteinUhlenbeckProcess(
     size=nb_actions, theta=.15, mu=0., sigma=.3)
@@ -51,10 +51,11 @@ agent = DDPGAgent(nb_actions=nb_actions, actor=actor, critic=critic, critic_acti
 agent.compile(Adam(lr=.001), metrics=['mse'])
 tensorboard = TensorBoard(log_dir="logs", write_grads=False, write_graph=False)
 
-agent.fit(env, nb_steps=30000, visualize=1, verbose=2, nb_max_episode_steps=5000, callbacks=[])
+agent.fit(env, nb_steps=5000, visualize=0, verbose=2, nb_max_episode_steps=100, callbacks=[])
 
 # save the weights
 # agent.save_weights('ddpg_{}_weights.h5f'.format(ENV_NAME), overwrite=True)
 
 # test
 # agent.test(env, nb_episodes=100, visualize=True, nb_max_episode_steps=5000)
+env.close()

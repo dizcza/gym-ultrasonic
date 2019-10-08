@@ -8,13 +8,8 @@ from gym.envs.classic_control import rendering
 from .obstacle import Robot, Obstacle
 
 
-def filled_polygon_from_obstacle(obstacle: Obstacle):
-    pos_rotated = list(obstacle.polygon.boundary.coords)
-    return rendering.FilledPolygon(pos_rotated)
-
-
 class UltrasonicServoEnv(gym.Env):
-    metadata = {'render.modes': ['human'], 'video.frames_per_second': 1}
+    metadata = {'render.modes': ['human', 'rgb_array']}
 
     # vector move along main axis (mm), angle turn (degrees)
     action_space = spaces.Box(low=-3, high=3, shape=(2,))
@@ -139,8 +134,9 @@ class UltrasonicServoEnv(gym.Env):
         sensor_view.add_attr(self.robot_transform)
         sensor_view.set_color(1, 0, 0)
 
-        for obj in self.obstacles:
-            polygon = filled_polygon_from_obstacle(obj)
+        for obstacle in self.obstacles:
+            polygon_coords = list(obstacle.polygon.boundary.coords)
+            polygon = rendering.FilledPolygon(polygon_coords)
             self.viewer.add_geom(polygon)
 
         self.viewer.add_geom(robot_view)
@@ -164,4 +160,5 @@ class UltrasonicServoEnv(gym.Env):
 
         self.robot_transform.set_translation(*self.robot.position)
         self.robot_transform.set_rotation(math.radians(self.robot.angle))
-        return self.viewer.render()
+        with_rgb = mode == 'rgb_array'
+        return self.viewer.render(return_rgb_array=with_rgb)
