@@ -53,7 +53,7 @@ class UltrasonicServoEnv(gym.Env):
 
         # rendering
         self.viewer = None
-        self.sensor_transforms = []
+        self.sensor_transform = rendering.Transform()
         self.robot_transform = rendering.Transform()
 
         self.reset()
@@ -132,18 +132,17 @@ class UltrasonicServoEnv(gym.Env):
         robot_view.add_attr(self.robot_transform)
         robot_view.set_color(r=0., g=0., b=0.9)
 
-        for sensor_id_unused in range(len(self.robot.ultrasonic_sensor_angles)):
-            circle = rendering.make_circle(radius=7)
-            cast_trans = rendering.Transform()
-            self.sensor_transforms.append(cast_trans)
-            circle.add_attr(cast_trans)
-            circle.set_color(1, 0, 0)
-            self.viewer.add_geom(circle)
+        # ultrasonic sensor collision circle
+        circle_collision = rendering.make_circle(radius=7)
+        circle_collision.add_attr(self.sensor_transform)
+        circle_collision.set_color(1, 0, 0)
+        self.viewer.add_geom(circle_collision)
 
-        sensor_view = rendering.make_circle(radius=3)
-        sensor_view.add_attr(rendering.Transform(translation=(self.robot.width / 2, 0)))
-        sensor_view.add_attr(self.robot_transform)
-        sensor_view.set_color(1, 0, 0)
+        # ultrasonic sensor circle on top of the robot
+        sensor_on_board = rendering.make_circle(radius=3)
+        sensor_on_board.add_attr(rendering.Transform(translation=(self.robot.width / 2, 0)))
+        sensor_on_board.add_attr(self.robot_transform)
+        sensor_on_board.set_color(1, 0, 0)
 
         for obstacle in self.obstacles:
             polygon_coords = list(obstacle.polygon.boundary.coords)
@@ -151,7 +150,7 @@ class UltrasonicServoEnv(gym.Env):
             self.viewer.add_geom(polygon)
 
         self.viewer.add_geom(robot_view)
-        self.viewer.add_geom(sensor_view)
+        self.viewer.add_geom(sensor_on_board)
 
     def render(self, mode='human'):
         """
@@ -166,9 +165,8 @@ class UltrasonicServoEnv(gym.Env):
         if self.viewer is None:
             self.init_view()
 
-        for sensor_transform, sensor_angle in zip(self.sensor_transforms, self.robot.ultrasonic_sensor_angles):
-            _, intersection_xy = self.robot.ray_cast(self.obstacles, angle_target=sensor_angle)
-            sensor_transform.set_translation(*intersection_xy)
+        _, intersection_xy = self.robot.ray_cast(self.obstacles, angle_target=0)
+        self.sensor_transform.set_translation(*intersection_xy)
 
         self.robot_transform.set_translation(*self.robot.position)
         self.robot_transform.set_rotation(math.radians(self.robot.angle))

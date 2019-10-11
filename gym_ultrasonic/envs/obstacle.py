@@ -70,7 +70,6 @@ class Robot(Obstacle):
             Robot rotation angle in degrees.
         """
         Obstacle.__init__(self, position, width, height, angle=angle)
-        self.ultrasonic_sensor_angles = (0,)
         self.speed = speed
         self.sensor_max_dist = sensor_max_dist
 
