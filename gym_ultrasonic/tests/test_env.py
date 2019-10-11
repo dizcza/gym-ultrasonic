@@ -1,5 +1,6 @@
-import unittest
 import math
+import random
+import unittest
 
 import gym
 import numpy as np
@@ -12,9 +13,10 @@ class TestUltrasonicEnv(unittest.TestCase):
 
     def setUp(self):
         self.env = gym.make('UltrasonicServo-v0')
+        self.env.robot.speed = 1
         self.env.reset()
-        self.env.robot.position = np.divide([self.env.width, self.env.height], 2.)
-        self.env.robot.angle = 0
+        # self.env.robot.position = np.divide([self.env.width, self.env.height], 2.)
+        # self.env.robot.angle = 0
 
     def tearDown(self):
         self.env.close()
@@ -59,11 +61,18 @@ class TestUltrasonicEnv(unittest.TestCase):
         self.assertTrue(done)
 
     def test_step_collide_towards(self):
-        max_dist = math.sqrt(self.env.width * self.env.height)
-        dist_to_obstacle, _ = self.env.robot.ray_cast(self.env.obstacles, angle_target=0, max_dist=max_dist)
+        dist_to_obstacle, _ = self.env.robot.ray_cast(self.env.obstacles, angle_target=0)
         min_dist, reward, done, _ = self.env.step(action=(dist_to_obstacle, 0))
         assert_array_almost_equal(min_dist, [0.], decimal=4)
         self.assertTrue(reward < 0)
+        self.assertTrue(done)
+
+    def test_large_robot(self):
+        """
+        A robot is so large - immediate collision.
+        """
+        self.env.robot.width = self.env.width
+        _, _, done, _ = self.env.step(action=(0, 0))
         self.assertTrue(done)
 
     def test_render(self):
@@ -71,4 +80,6 @@ class TestUltrasonicEnv(unittest.TestCase):
 
 
 if __name__ == '__main__':
+    random.seed(27)
+    np.random.seed(27)
     unittest.main()

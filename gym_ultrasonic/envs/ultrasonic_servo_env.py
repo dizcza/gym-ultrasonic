@@ -90,27 +90,27 @@ class UltrasonicServoEnv(gym.Env):
         info = {}
         return self.state, reward, done, info
 
-    def reward(self, speed_move, angle_turn):
+    def reward(self, move_step, angle_turn):
         """
         Computes the reward.
 
         Parameters
         ----------
-        speed_move: float
-            Move with this `speed_move`.
+        move_step: float
+            Move robot with `move_step` mm along its main axis.
         angle_turn: float
-            Turn by this `angle_turn` degrees.
+            Turn robot by `angle_turn` degrees.
 
         Returns
         -------
         reward: float
-            A reward, obtained by applying these steps.
+            A reward, obtained by applying this step.
         done: bool
-            Whether the robot collided with an obstacle.rst.
+            Whether the robot collided with any of obstacles.
         """
         if self.robot.collision(self.obstacles):
             return -500, True
-        reward = -2 + speed_move - 3 * np.abs(angle_turn)
+        reward = -2 + move_step - 3 * np.abs(angle_turn)
         return reward, False
 
     def reset(self):
@@ -130,6 +130,7 @@ class UltrasonicServoEnv(gym.Env):
         self.viewer = rendering.Viewer(self.width, self.height)
         robot_view = rendering.FilledPolygon(self.robot.get_polygon_parallel_coords())
         robot_view.add_attr(self.robot_transform)
+        robot_view.set_color(r=0., g=0., b=0.9)
 
         for sensor_id_unused in range(len(self.robot.ultrasonic_sensor_angles)):
             circle = rendering.make_circle(radius=7)

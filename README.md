@@ -1,8 +1,8 @@
 # OpenAI Gym Ultrasonic robot sensor environment
 
-![](https://travis-ci.org/NeuralEnsemble/elephant.png?branch=master "Unit Test Status")
+[![Build Status](https://travis-ci.org/dizcza/gym-ultrasonic.svg?branch=master)](https://travis-ci.org/dizcza/gym-ultrasonic)
 [![Coverage Status](https://coveralls.io/repos/github/dizcza/gym-ultrasonic/badge.svg?branch=master)](https://coveralls.io/github/dizcza/gym-ultrasonic?branch=master)
-![](https://readthedocs.org/projects/gym-ultrasonic/badge/?version=latest "Documentation Status")
+[![Documentation Status](https://readthedocs.org/projects/gym-ultrasonic/badge/?version=latest)](https://gym-ultrasonic.readthedocs.io/en/latest/?badge=latest)
 
 ![](docs/images/one-sonar.png)
 

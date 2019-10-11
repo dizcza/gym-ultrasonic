@@ -19,7 +19,7 @@ class Obstacle:
         Parameters
         ----------
         position: List[float]
-            Obstacle position in world coordinates, (x, y).
+            Obstacle center position in world coordinates, (x, y).
         width: float
             Obstacle width.
         height: float
@@ -61,13 +61,13 @@ class Robot(Obstacle):
         Parameters
         ----------
         position: List[float]
-            Robot's position in world coordinates, (x, y).
+            Robot center position in world coordinates, (x, y).
         width: float
-            Robot's width.
+            Robot width.
         height: float
-            Robot's height.
+            Robot height.
         angle: float
-            Robot's rotation angle in degrees.
+            Robot rotation angle in degrees.
         """
         Obstacle.__init__(self, position, width, height, angle=angle)
         self.ultrasonic_sensor_angles = (0,)
@@ -153,6 +153,8 @@ class Robot(Obstacle):
         intersection_xy: list or np.ndarray
             X and Y of the intersection point with an obstacle.
         """
+        if self.collision(obstacles):
+            return 0., self.position
         sensor_pos = self.sensor_position
         angle_target = math.radians(self.angle + angle_target)
         target_direction = np.array([np.cos(angle_target), np.sin(angle_target)])
