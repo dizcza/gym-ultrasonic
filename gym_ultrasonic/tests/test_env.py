@@ -12,7 +12,7 @@ import gym_ultrasonic
 class TestUltrasonicEnv(unittest.TestCase):
 
     def setUp(self):
-        self.env = gym.make('UltrasonicServo-v0')
+        self.env = gym.make('Ultrasonic-v0')
         self.env.robot.speed = 1
         self.env.reset()
         # self.env.robot.position = np.divide([self.env.width, self.env.height], 2.)

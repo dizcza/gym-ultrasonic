@@ -9,7 +9,7 @@ from gym.envs.classic_control import rendering
 from .obstacle import Robot, Obstacle
 
 
-class UltrasonicServoEnv(gym.Env):
+class UltrasonicEnv(gym.Env):
     metadata = {'render.modes': ['human', 'rgb_array']}
 
     # vector move along main axis (mm), angle turn (degrees)

@@ -5,4 +5,4 @@ Modules
    :maxdepth: 1
 
    reference/obstacle
-   reference/ultrasonic_servo_env
+   reference/ultrasonic_env

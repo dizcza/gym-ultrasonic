@@ -10,11 +10,11 @@ from rl.random import OrnsteinUhlenbeckProcess
 
 import gym_ultrasonic
 
-ENV_NAME = 'UltrasonicServo-v0'
+ENV_NAME = 'Ultrasonic-v0'
 
 # Get the environment and extract the number of actions.
 env = gym.make(ENV_NAME)
-env = gym.wrappers.Monitor(env, "capture", force=True)
+# env = gym.wrappers.Monitor(env, "capture", force=True)
 nb_actions = env.action_space.shape[0]
 
 # see issue https://github.com/keras-rl/keras-rl/issues/160
@@ -51,7 +51,7 @@ agent = DDPGAgent(nb_actions=nb_actions, actor=actor, critic=critic, critic_acti
 agent.compile(Adam(lr=.001), metrics=['mse'])
 tensorboard = TensorBoard(log_dir="logs", write_grads=False, write_graph=False)
 
-agent.fit(env, nb_steps=5000, visualize=0, verbose=2, nb_max_episode_steps=100, callbacks=[])
+agent.fit(env, nb_steps=50000, visualize=1, verbose=2,  callbacks=[])
 
 # save the weights
 # agent.save_weights('ddpg_{}_weights.h5f'.format(ENV_NAME), overwrite=True)
