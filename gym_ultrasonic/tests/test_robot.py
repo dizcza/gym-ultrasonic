@@ -68,15 +68,15 @@ class TestRobotMethods(unittest.TestCase):
         self.robot = Robot([300, 300], 50, 50)
         self.robot.angle = 0
         obstacle = Obstacle([400, 300], 50, 50)
-        min_dist, p_xy = self.robot.ray_cast([obstacle], angle_target=0)
-        self.assertEqual(min_dist, 50.0)
+        min_dist, p_xy = self.robot.ray_cast([obstacle])
+        self.assertEqual(min_dist, 60.0)
         assert_array_almost_equal(p_xy, [375, 300])
 
     def test_ray_casting_nohit(self):
         self.robot = Robot([300, 300], 50, 50)
         self.robot.angle = 0
         obstacle = Obstacle([300, 400], 50, 50)
-        min_dist, _ = self.robot.ray_cast([obstacle], angle_target=0)
+        min_dist, _ = self.robot.ray_cast([obstacle])
         self.assertEqual(min_dist, self.robot.sensor_max_dist)
 
     def test_coll_rotated(self):

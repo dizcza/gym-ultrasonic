@@ -1,5 +1,6 @@
 import math
 import random
+from typing import List
 
 import gym
 import numpy as np
@@ -16,7 +17,7 @@ class UltrasonicServoEnv(gym.Env):
     action_space = spaces.Box(low=-3, high=3, shape=(2,))
 
     # dist to obstacle
-    observation_space = spaces.Box(low=0, high=2000, shape=(1,))
+    observation_space = spaces.Box(low=np.array([-90, 0]), high=np.array([90, 2000]))
 
     def __init__(self):
         super().__init__()
@@ -25,7 +26,7 @@ class UltrasonicServoEnv(gym.Env):
 
         # robot's position will be reset later on
         self.robot = Robot([0, 0], width=120 / self.scale_down, height=90 / self.scale_down, speed=3,
-                           sensor_max_dist=self.observation_space.high[0])
+                           sensor_max_dist=self.observation_space.high[1])
 
         wall_size = 10
         indent = wall_size + max(self.robot.width, self.robot.height)
@@ -49,12 +50,13 @@ class UltrasonicServoEnv(gym.Env):
             self.obstacles.append(obst)
         self.obstacles.extend(walls)
 
-        self.state = [0.]  # observation: min dist to obstacle
+        self.state = self.init_state
 
         # rendering
         self.viewer = None
-        self.sensor_transform = rendering.Transform()
+        self.ray_collision_transform = rendering.Transform()
         self.robot_transform = rendering.Transform()
+        self.servo_transform = rendering.Transform()
 
         self.reset()
 
@@ -83,12 +85,18 @@ class UltrasonicServoEnv(gym.Env):
         move_step, angle_turn = action
         self.robot.move_forward(move_step)
         self.robot.turn(angle_turn)
+        self.robot.servo.step_rotate()
         reward, done = self.reward(move_step, angle_turn)
-        # central ultrasonic sensor distance
-        min_dist, _ = self.robot.ray_cast(self.obstacles, angle_target=0)
-        self.state = [min_dist]
+        self.update_state()
         info = {}
         return self.state, reward, done, info
+
+    def update_state(self):
+        """
+        Updates the env state which is a list, containing two values: min dist to obstacles and servo rotation angle.
+        """
+        min_dist, _ = self.robot.ray_cast(self.obstacles)
+        self.state = [min_dist, self.robot.servo.angle]
 
     def reward(self, move_step, angle_turn):
         """
@@ -113,14 +121,27 @@ class UltrasonicServoEnv(gym.Env):
         reward = -2 + move_step - 3 * np.abs(angle_turn)
         return reward, False
 
+    @property
+    def init_state(self):
+        """
+        Returns
+        -------
+        List[float]
+            Initial env state (observation).
+            It's not clear what the default "min dist to obstacles" is - 0, `sensor_max_dist` or a value in-between.
+            But since we `update_state()` after each `reset()`, it should not matter.
+        """
+        return [self.robot.sensor_max_dist, 0.]
+
     def reset(self):
         """
         Resets the state and spawns a new robot position.
         """
-        self.state = [0.]
+        self.state = self.init_state
         self.robot.reset(box=self.allowed_space)
         while self.robot.collision(self.obstacles):
             self.robot.reset(box=self.allowed_space)
+        self.update_state()
         return self.state
 
     def init_view(self):
@@ -134,15 +155,15 @@ class UltrasonicServoEnv(gym.Env):
 
         # ultrasonic sensor collision circle
         circle_collision = rendering.make_circle(radius=7)
-        circle_collision.add_attr(self.sensor_transform)
+        circle_collision.add_attr(self.ray_collision_transform)
         circle_collision.set_color(1, 0, 0)
         self.viewer.add_geom(circle_collision)
 
-        # ultrasonic sensor circle on top of the robot
-        sensor_on_board = rendering.make_circle(radius=3)
-        sensor_on_board.add_attr(rendering.Transform(translation=(self.robot.width / 2, 0)))
-        sensor_on_board.add_attr(self.robot_transform)
-        sensor_on_board.set_color(1, 0, 0)
+        servo_view = rendering.FilledPolygon(self.robot.servo.get_polygon_parallel_coords())
+        servo_view.add_attr(self.servo_transform)
+        servo_view.add_attr(rendering.Transform(translation=(self.robot.servo_shift, 0)))
+        servo_view.add_attr(self.robot_transform)
+        servo_view.set_color(1, 0, 0)
 
         for obstacle in self.obstacles:
             polygon_coords = list(obstacle.polygon.boundary.coords)
@@ -150,7 +171,7 @@ class UltrasonicServoEnv(gym.Env):
             self.viewer.add_geom(polygon)
 
         self.viewer.add_geom(robot_view)
-        self.viewer.add_geom(sensor_on_board)
+        self.viewer.add_geom(servo_view)
 
     def render(self, mode='human'):
         """
@@ -165,10 +186,11 @@ class UltrasonicServoEnv(gym.Env):
         if self.viewer is None:
             self.init_view()
 
-        _, intersection_xy = self.robot.ray_cast(self.obstacles, angle_target=0)
-        self.sensor_transform.set_translation(*intersection_xy)
+        _, intersection_xy = self.robot.ray_cast(self.obstacles)
+        self.ray_collision_transform.set_translation(*intersection_xy)
 
         self.robot_transform.set_translation(*self.robot.position)
         self.robot_transform.set_rotation(math.radians(self.robot.angle))
+        self.servo_transform.set_rotation(math.radians(self.robot.servo.angle))
         with_rgb = mode == 'rgb_array'
         return self.viewer.render(return_rgb_array=with_rgb)

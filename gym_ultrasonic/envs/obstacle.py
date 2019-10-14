@@ -1,13 +1,14 @@
 import math
 import random
+import time
 import warnings
+from typing import List
 
 import numpy as np
 from gym.spaces import Box
 from shapely import affinity
 from shapely import speedups
 from shapely.geometry import Polygon, LineString
-from typing import List
 
 if not speedups.enabled:
     warnings.warn("Install Cython to enable shapely speedups")
@@ -21,11 +22,12 @@ class Obstacle:
         position: List[float]
             Obstacle center position in world coordinates, (x, y).
         width: float
-            Obstacle width.
+            Obstacle width, mm
         height: float
-            Obstacle height.
+            Obstacle height, mm
         angle: float
             Obstacle rotation angle in degrees.
+            Positive angles are counter-clockwise and negative are clockwise rotations.
         """
         self.position = np.array(position, dtype=np.float32)
         self.width = width
@@ -55,23 +57,90 @@ class Obstacle:
         return [(l, b), (l, t), (r, t), (r, b)]
 
 
+class _Servo(Obstacle):
+    """
+    Servo that holds sonar on board.
+    Servo has only one function - rotate the sonar.
+    """
+
+    def __init__(self, width, height, angle_range=(-90, 90), angular_vel=30):
+        """
+        Parameters
+        ----------
+        width: float
+            Servo width, mm
+        height: float
+            Servo height, mm
+        angle_range: List[float]
+            Min and max rotation angle, degrees
+        angular_vel: float
+            Rotation degrees per second.
+        """
+        super().__init__(position=[0, 0], width=width, height=height, angle=0)
+        self.angle_range = angle_range
+        self.angular_vel = angular_vel
+        self.tick = None
+        self.ccw = 1
+
+    def step_rotate(self):
+        """
+        Rotates the servo by the time spent.
+        """
+        if self.tick is None:
+            self.tick = time.time()
+        tick = time.time()
+        angle = self.angle + (tick - self.tick) * self.angular_vel * self.ccw
+        self.tick = tick
+        min_angle, max_angle = self.angle_range
+        if angle > max_angle:
+            angle = max_angle
+            # start turning clockwise
+            self.ccw = -1
+        elif angle < min_angle:
+            angle = min_angle
+            # start turning counter-clockwise
+            self.ccw = 1
+        self.angle = angle
+
+    def reset(self):
+        """
+        Resets the servo.
+        """
+        self.tick = None
+        self.ccw = 1
+        self.angle = 0
+
+
 class Robot(Obstacle):
-    def __init__(self, position, width, height, angle=0, speed=1., sensor_max_dist=2000):
+    """
+    Robot with a mounted servo and ultrasonic range sensor.
+    """
+
+    def __init__(self, position, width, height, speed=1., sensor_max_dist=2000):
         """
         Parameters
         ----------
         position: List[float]
             Robot center position in world coordinates, (x, y).
         width: float
-            Robot width.
+            Robot width, mm
         height: float
-            Robot height.
-        angle: float
-            Robot rotation angle in degrees.
+            Robot height, mm
         """
-        Obstacle.__init__(self, position, width, height, angle=angle)
+        Obstacle.__init__(self, position, width, height, angle=0)
         self.speed = speed
         self.sensor_max_dist = sensor_max_dist
+        self.servo = _Servo(width=0.3 * self.height, height=0.5 * self.width)
+
+    @property
+    def servo_shift(self):
+        """
+        Returns
+        -------
+        float
+            Shift of the servo along robot's main axis, mm
+        """
+        return 0.3 * self.width
 
     def move_forward(self, move_step):
         """
@@ -98,7 +167,7 @@ class Robot(Obstacle):
         Parameters
         ----------
         obj: Obstacle or List[Obstacle]
-            An obstacle(s) to the for a collision.
+            An obstacle(s) to check for a collision.
 
         Returns
         -------
@@ -124,38 +193,37 @@ class Robot(Obstacle):
         return np.array([np.cos(angle_rad), np.sin(angle_rad)])
 
     @property
-    def sensor_position(self):
+    def servo_position(self):
         """
         Returns
         -------
         np.ndarray
-            Ultrasonic sensor position in world coordinates, (x, y)
+            World coordinates of Servo with embedded Ultrasonic sensor, (x, y)
         """
-        return self.position + self.direction_vector * (self.width / 2)
+        return self.position + self.direction_vector * self.servo_shift
 
-    def ray_cast(self, obstacles, angle_target):
+    def ray_cast(self, obstacles):
         """
-        Casts a ray at specific `angle_target` and checks if there an intersection with `obstacles`.
+        Casts a ray along servo sensor direction and checks if there an intersection with `obstacles`.
+        Simulates Ultrasonic range sonar, mounted on top of the servo, in a real robot.
 
         Parameters
         ----------
         obstacles: List[Obstacle]
             List of obstacles in the scene.
-        angle_target: float
-            Sensor angle to ray cast.
 
         Returns
         -------
         min_dist: float
-            Min dist to an obstacle, w.r.t. `angle_target`.
+            Min dist to an obstacle.
             If no obstacle is found at the ray intersection, `max_dist` is returned.
         intersection_xy: list or np.ndarray
             X and Y of the intersection point with an obstacle.
         """
         if self.collision(obstacles):
             return 0., self.position
-        sensor_pos = self.sensor_position
-        angle_target = math.radians(self.angle + angle_target)
+        sensor_pos = self.servo_position
+        angle_target = math.radians(self.angle + self.servo.angle)
         target_direction = np.array([np.cos(angle_target), np.sin(angle_target)])
         ray_cast = LineString([sensor_pos, sensor_pos + target_direction * self.sensor_max_dist])
         min_dist = self.sensor_max_dist
@@ -187,3 +255,4 @@ class Robot(Obstacle):
             raise ValueError("Can sample a point from a plain 2D box only")
         self.position = box.sample()
         self.angle = random.randint(0, 360)
+        self.servo.reset()

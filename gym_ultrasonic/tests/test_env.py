@@ -23,7 +23,7 @@ class TestUltrasonicEnv(unittest.TestCase):
 
     def test_reset(self):
         self.env.reset()
-        assert_array_almost_equal(self.env.state, [0.])
+        self.assertGreater(self.env.state[0], 0, msg="Robot should not collide")
         self.assertFalse(self.env.robot.collision(self.env.obstacles))
 
     def test_step_do_nothing(self):
@@ -55,15 +55,15 @@ class TestUltrasonicEnv(unittest.TestCase):
         angle_turn = angle_target - self.env.robot.angle
         self.env.robot.turn(angle_turn)
         dist_to_obstacle = np.linalg.norm(vec_to_obstacle)
-        min_dist, reward, done, _ = self.env.step(action=(dist_to_obstacle, 0))
-        assert_array_almost_equal(min_dist, [0.], decimal=4)
+        observation, reward, done, _ = self.env.step(action=(dist_to_obstacle, 0))
+        self.assertAlmostEqual(observation[0], 0, places=4)
         self.assertTrue(reward < 0)
         self.assertTrue(done)
 
     def test_step_collide_towards(self):
-        dist_to_obstacle, _ = self.env.robot.ray_cast(self.env.obstacles, angle_target=0)
-        min_dist, reward, done, _ = self.env.step(action=(dist_to_obstacle, 0))
-        assert_array_almost_equal(min_dist, [0.], decimal=4)
+        dist_to_obstacle, _ = self.env.robot.ray_cast(self.env.obstacles)
+        observation, reward, done, _ = self.env.step(action=(dist_to_obstacle, 0))
+        self.assertAlmostEqual(observation[0], 0, places=4)
         self.assertTrue(reward < 0)
         self.assertTrue(done)
 
