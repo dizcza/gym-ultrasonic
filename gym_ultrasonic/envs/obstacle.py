@@ -2,7 +2,7 @@ import math
 import random
 import time
 import warnings
-from typing import List
+from typing import List, Tuple
 
 import numpy as np
 from gym.spaces import Box
@@ -15,6 +15,10 @@ if not speedups.enabled:
 
 
 class Obstacle:
+    """
+    A static rectangular obstacle.
+    """
+
     def __init__(self, position, width, height, angle=0):
         """
         Parameters
@@ -56,6 +60,17 @@ class Obstacle:
         l, r, t, b = -self.width / 2, self.width / 2, self.height / 2, -self.height / 2
         return [(l, b), (l, t), (r, t), (r, b)]
 
+    def set_position(self, position):
+        """
+        Sets the object global position.
+
+        Parameters
+        ----------
+        position: List[float]
+            `Obstacle` center position in world coordinates, (x, y).
+        """
+        self.position = np.array(position, dtype=np.float32)
+
 
 class _Servo(Obstacle):
     """
@@ -71,8 +86,8 @@ class _Servo(Obstacle):
             Servo width, mm
         height: float
             Servo height, mm
-        angle_range: List[float]
-            Min and max rotation angle, degrees
+        angle_range: Tuple[float]
+            Min and max rotation angles, degrees
         angular_vel: float
             Rotation degrees per second.
         """
@@ -116,12 +131,13 @@ class Robot(Obstacle):
     Robot with a mounted servo and ultrasonic range sensor.
     """
 
-    def __init__(self, position, width, height, speed=1., sensor_max_dist=2000, servo_angular_vel=30):
+    def __init__(self, width, height, speed=1., sensor_max_dist=2000, servo_angle_range=(-90, 90),
+                 servo_angular_vel=30):
         """
+        Initializes the robot with the given parameters at `[0, 0]` position and `0` rotation angle.
+
         Parameters
         ----------
-        position: List[float]
-            Robot center position in world coordinates, (x, y).
         width: float
             Robot width, mm
         height: float
@@ -132,13 +148,16 @@ class Robot(Obstacle):
         sensor_max_dist: float
             Ultrasonic sonar max range, mm.
             Default is 2000 mm.
+        servo_angle_range: Tuple[float]
+            Servo min and max rotation angles, degrees.
         servo_angular_vel: float
             Servo angular velocity, degrees per sec.
         """
-        Obstacle.__init__(self, position, width, height, angle=0)
+        super().__init__(position=[0., 0.], width=width, height=height, angle=0)
         self.speed = speed
         self.sensor_max_dist = sensor_max_dist
-        self.servo = _Servo(width=0.3 * self.height, height=0.5 * self.width, angular_vel=servo_angular_vel)
+        self.servo = _Servo(width=0.3 * self.height, height=0.5 * self.width, angle_range=servo_angle_range,
+                            angular_vel=servo_angular_vel)
 
     @property
     def servo_shift(self):

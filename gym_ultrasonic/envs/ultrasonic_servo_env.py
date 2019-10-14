@@ -30,9 +30,12 @@ class UltrasonicServoEnv(gym.Env):
         self.scale_down = 5
         self.width = self.height = 3000 // self.scale_down
 
+        servo_angle_range = (self.observation_space.low[0], self.observation_space.high[0])
+
         # robot's position will be reset later on
-        self.robot = Robot([0, 0], width=120 / self.scale_down, height=90 / self.scale_down, speed=3,
+        self.robot = Robot(width=120 / self.scale_down, height=90 / self.scale_down, speed=3,
                            sensor_max_dist=self.observation_space.high[1],
+                           servo_angle_range=servo_angle_range,
                            servo_angular_vel=servo_angular_vel)
 
         wall_size = 10
