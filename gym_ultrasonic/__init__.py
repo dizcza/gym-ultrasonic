@@ -1,7 +1,7 @@
 from gym.envs.registration import register
 
 register(
-    id='Ultrasonic-v0',
-    entry_point='gym_ultrasonic.envs:UltrasonicEnv',
+    id='UltrasonicServo-v0',
+    entry_point='gym_ultrasonic.envs:UltrasonicServoEnv',
     max_episode_steps=1000,
 )
