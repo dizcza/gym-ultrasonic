@@ -116,7 +116,7 @@ class Robot(Obstacle):
     Robot with a mounted servo and ultrasonic range sensor.
     """
 
-    def __init__(self, position, width, height, speed=1., sensor_max_dist=2000):
+    def __init__(self, position, width, height, speed=1., sensor_max_dist=2000, servo_angular_vel=30):
         """
         Parameters
         ----------
@@ -126,11 +126,19 @@ class Robot(Obstacle):
             Robot width, mm
         height: float
             Robot height, mm
+        speed: float
+            Robot speed multiplier.
+            Default is 1.
+        sensor_max_dist: float
+            Ultrasonic sonar max range, mm.
+            Default is 2000 mm.
+        servo_angular_vel: float
+            Servo angular velocity, degrees per sec.
         """
         Obstacle.__init__(self, position, width, height, angle=0)
         self.speed = speed
         self.sensor_max_dist = sensor_max_dist
-        self.servo = _Servo(width=0.3 * self.height, height=0.5 * self.width)
+        self.servo = _Servo(width=0.3 * self.height, height=0.5 * self.width, angular_vel=servo_angular_vel)
 
     @property
     def servo_shift(self):

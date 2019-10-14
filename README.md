@@ -7,7 +7,10 @@
 ![](docs/images/one-sonar.png)
 
 ### Environment
-`UltrasonicServo-v0` (`AutonomousRobot-v1` in the [original repo](https://github.com/lelmac/robotsim)) - Ultrasonic sensor (without moving servo for now), mounted on top of a robot (small red circle), heads forward.
+
+`UltrasonicServo-v0` (`AutonomousRobot-v1` in the [original repo](https://github.com/lelmac/robotsim)) - Ultrasonic sonar sensor (without a moving servo), mounted on top of a robot (small red rectangle), heads forward.
+
+`UltrasonicServo-v1` - Ultrasonic sonar sensor with a moving servo (that rotates the sonar sensor).
 
 ## Setup
 ```bash

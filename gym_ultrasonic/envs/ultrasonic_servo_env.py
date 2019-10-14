@@ -19,14 +19,21 @@ class UltrasonicServoEnv(gym.Env):
     # dist to obstacle
     observation_space = spaces.Box(low=np.array([-90, 0]), high=np.array([90, 2000]))
 
-    def __init__(self):
+    def __init__(self, servo_angular_vel=30):
+        """
+        Parameters
+        ----------
+        servo_angular_vel: float
+            Servo angular velocity, degrees per sec.
+        """
         super().__init__()
         self.scale_down = 5
         self.width = self.height = 3000 // self.scale_down
 
         # robot's position will be reset later on
         self.robot = Robot([0, 0], width=120 / self.scale_down, height=90 / self.scale_down, speed=3,
-                           sensor_max_dist=self.observation_space.high[1])
+                           sensor_max_dist=self.observation_space.high[1],
+                           servo_angular_vel=servo_angular_vel)
 
         wall_size = 10
         indent = wall_size + max(self.robot.width, self.robot.height)
