@@ -71,6 +71,12 @@ class Obstacle:
         """
         self.position = np.array(position, dtype=np.float32)
 
+    def __str__(self):
+        return f"{self.__class__.__name__}({self.extra_repr()})"
+
+    def extra_repr(self):
+        return f"{self.width} x {self.height}"
+
 
 class _Servo(Obstacle):
     """
@@ -132,6 +138,9 @@ class _Servo(Obstacle):
         self.tick = None
         self.ccw = 1
         self.angle = 0
+
+    def extra_repr(self):
+        return f"angle_range={self.angle_range}, angular_vel={self.angular_vel}"
 
 
 class Robot(Obstacle):
@@ -291,3 +300,6 @@ class Robot(Obstacle):
         self.position = box.sample()
         self.angle = random.randint(0, 360)
         self.servo.reset()
+
+    def extra_repr(self):
+        return f"{super().extra_repr()} with a {self.servo}"

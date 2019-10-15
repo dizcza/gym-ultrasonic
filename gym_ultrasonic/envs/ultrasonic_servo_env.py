@@ -136,7 +136,7 @@ class UltrasonicServoEnv(gym.Env):
         """
         if self.robot.collision(self.obstacles):
             return -1000, True
-        reward = move_step - 3 * abs(angle_turn)
+        reward = -2 + move_step - abs(angle_turn)
         if servo_turn is not None:
             reward -= abs(servo_turn)
         return reward, False
@@ -214,3 +214,8 @@ class UltrasonicServoEnv(gym.Env):
         self.servo_transform.set_rotation(math.radians(self.robot.servo.angle))
         with_rgb = mode == 'rgb_array'
         return self.viewer.render(return_rgb_array=with_rgb)
+
+    def __str__(self):
+        return f"{super().__str__()}:\nobservation_space={self.observation_space.low, self.observation_space.high};" \
+               f"\naction_space={self.action_space.low, self.action_space.high};" \
+               f"\n{self.robot}"
