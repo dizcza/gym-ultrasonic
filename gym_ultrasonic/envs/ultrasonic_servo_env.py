@@ -131,7 +131,6 @@ class UltrasonicServoEnv(gym.Env):
         if self.robot.collision(self.obstacles):
             return -500, True
         reward = move_step - 3 * np.abs(angle_turn)
-        print(reward, move_step)
         return reward, False
 
     @property
