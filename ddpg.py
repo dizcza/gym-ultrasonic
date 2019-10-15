@@ -1,5 +1,9 @@
+import random
+from pathlib import Path
+
 import gym.wrappers
-from keras.callbacks import TensorBoard
+import numpy as np
+from keras.callbacks import TensorBoard, ModelCheckpoint
 from keras.layers import Dense, Flatten, Input, InputLayer
 from keras.layers.merge import concatenate
 from keras.models import Sequential, Model
@@ -10,19 +14,15 @@ from rl.random import OrnsteinUhlenbeckProcess
 
 import gym_ultrasonic
 
-import random
-import numpy as np
-
 random.seed(27)
 np.random.seed(27)
 
-
-ENV_NAME = 'UltrasonicServo-v1'
+ENV_NAME = 'UltrasonicServo-v2'
 
 # Get the environment and extract the number of actions.
 env = gym.make(ENV_NAME)
 env.seed(27)
-env = gym.wrappers.Monitor(env, "capture", force=True)
+# env = gym.wrappers.Monitor(env, "capture", force=True)
 nb_actions = env.action_space.shape[0]
 
 # see issue https://github.com/keras-rl/keras-rl/issues/160
@@ -64,12 +64,18 @@ def create_actor_critic_agent():
 
 
 agent = create_actor_critic_agent()
+WEIGHTS_PATH = Path('weights') / 'ddpg_{}_weights.h5'.format(ENV_NAME)
+WEIGHTS_PATH.parent.mkdir(exist_ok=True)
+WEIGHTS_PATH = str(WEIGHTS_PATH)
 tensorboard = TensorBoard(log_dir="logs", write_grads=False, write_graph=False)
-agent.fit(env, nb_steps=5000, visualize=1, verbose=2, nb_max_episode_steps=1000, callbacks=[])
+checkpoint = ModelCheckpoint(WEIGHTS_PATH, save_weights_only=True, period=10)
+
+agent.load_weights(WEIGHTS_PATH)
+agent.fit(env, nb_steps=50000, visualize=0, verbose=2, nb_max_episode_steps=1000, callbacks=[tensorboard, checkpoint])
 
 # save the weights
-# agent.save_weights('ddpg_{}_weights.h5f'.format(ENV_NAME), overwrite=True)
+agent.save_weights(WEIGHTS_PATH, overwrite=True)
 
 # test
-# agent.test(env, nb_episodes=100, visualize=True, nb_max_episode_steps=5000)
+agent.test(env, nb_episodes=3, visualize=True, nb_max_episode_steps=5000)
 env.close()

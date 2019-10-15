@@ -56,7 +56,7 @@ class UltrasonicServoEnv(gym.Env):
 
         sample_obstacle_size = lambda: random.randint(self.robot.height // 2, self.robot.width * 3)
 
-        for random_obstacle_id in range(5):
+        for random_obstacle_id in range(15):
             obst = Obstacle(position=random.sample(range(self.width), k=2),
                             width=sample_obstacle_size(),
                             height=sample_obstacle_size(),

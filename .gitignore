@@ -6,6 +6,7 @@ docs/build/
 logs/
 ignored/
 capture/
+weights/
 .pytest_cache/
 *.py[cod]
 *.egg-info/
