@@ -13,10 +13,7 @@ from .obstacle import Robot, Obstacle
 class UltrasonicServoEnv(gym.Env):
     metadata = {'render.modes': ['human', 'rgb_array']}
 
-    # vector move along main axis (mm), angle turn (degrees)
-    action_space = spaces.Box(low=-3, high=3, shape=(2,))
-
-    # dist to obstacle
+    # servo angle, dist to obstacle
     observation_space = spaces.Box(low=np.array([-30, 0]), high=np.array([30, 2000]))
 
     def __init__(self, robot_speed=5, servo_angular_vel=120):
@@ -25,7 +22,7 @@ class UltrasonicServoEnv(gym.Env):
         ----------
         robot_speed: float
             Robot speed multiplier.
-        servo_angular_vel: float
+        servo_angular_vel: float or str
             Servo angular velocity, degrees per sec.
         """
         super().__init__()
@@ -33,6 +30,11 @@ class UltrasonicServoEnv(gym.Env):
         self.width = self.height = 3000 // self.scale_down
 
         servo_angle_range = (self.observation_space.low[0], self.observation_space.high[0])
+        if servo_angular_vel == 'learn':
+            # vector move along main axis (mm), angle turn (degrees), servo turn (degrees)
+            self.action_space = spaces.Box(low=-3, high=3, shape=(3,))
+        else:
+            self.action_space = spaces.Box(low=-3, high=3, shape=(2,))
 
         # robot's position will be reset later on
         self.robot = Robot(width=120 / self.scale_down, height=90 / self.scale_down, speed=robot_speed,
@@ -94,11 +96,13 @@ class UltrasonicServoEnv(gym.Env):
         info: dict
             An empty dict. Unused.
         """
-        move_step, angle_turn = action
+        move_step = action[0]
+        robot_turn = action[1]
+        servo_turn = action[2] if len(action) == 3 else None
         self.robot.move_forward(move_step)
-        self.robot.turn(angle_turn)
-        self.robot.servo.step_rotate()
-        reward, done = self.reward(move_step, angle_turn)
+        self.robot.turn(robot_turn)
+        self.robot.servo.rotate(servo_turn)
+        reward, done = self.reward(move_step, robot_turn, servo_turn)
         self.update_state()
         info = {}
         return self.state, reward, done, info
@@ -110,7 +114,7 @@ class UltrasonicServoEnv(gym.Env):
         min_dist, _ = self.robot.ray_cast(self.obstacles)
         self.state = [min_dist, self.robot.servo.angle]
 
-    def reward(self, move_step, angle_turn):
+    def reward(self, move_step, angle_turn, servo_turn):
         """
         Computes the reward.
 
@@ -120,6 +124,8 @@ class UltrasonicServoEnv(gym.Env):
             Move robot with `move_step` mm along its main axis.
         angle_turn: float
             Turn robot by `angle_turn` degrees.
+        servo_turn: float
+            Turn servo by `servo_turn` degrees, if not None.
 
         Returns
         -------
@@ -129,8 +135,10 @@ class UltrasonicServoEnv(gym.Env):
             Whether the robot collided with any of obstacles.
         """
         if self.robot.collision(self.obstacles):
-            return -500, True
-        reward = move_step - 3 * np.abs(angle_turn)
+            return -1000, True
+        reward = move_step - 3 * abs(angle_turn)
+        if servo_turn is not None:
+            reward -= abs(servo_turn)
         return reward, False
 
     @property

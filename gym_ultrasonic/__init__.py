@@ -14,3 +14,12 @@ register(
     entry_point='gym_ultrasonic.envs:UltrasonicServoEnv',
     max_episode_steps=1000,
 )
+
+
+# With a servo. Rotation angle is predicted by the actor
+register(
+    id='UltrasonicServo-v2',
+    entry_point='gym_ultrasonic.envs:UltrasonicServoEnv',
+    kwargs={"servo_angular_vel": 'learn'},
+    max_episode_steps=1000,
+)

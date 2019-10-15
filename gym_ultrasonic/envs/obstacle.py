@@ -88,7 +88,7 @@ class _Servo(Obstacle):
             Servo height, mm
         angle_range: Tuple[float]
             Min and max rotation angles, degrees
-        angular_vel: float
+        angular_vel: float or str
             Rotation degrees per second.
         """
         super().__init__(position=[0, 0], width=width, height=height, angle=0)
@@ -97,14 +97,22 @@ class _Servo(Obstacle):
         self.tick = None
         self.ccw = 1
 
-    def step_rotate(self):
+    def rotate(self, angle_turn=None):
         """
-        Rotates the servo by the time spent.
+        Rotates the servo.
+
+        Parameters
+        ----------
+        angle_turn: float
+            Angle to rotate the servo.
+            If set to `None`, it's calculated by the time spent, multiplied by the angular velocity.
         """
         if self.tick is None:
             self.tick = time.time()
         tick = time.time()
-        angle = self.angle + (tick - self.tick) * self.angular_vel * self.ccw
+        if angle_turn is None:
+            angle_turn = (tick - self.tick) * self.angular_vel * self.ccw
+        angle = self.angle + angle_turn
         self.tick = tick
         min_angle, max_angle = self.angle_range
         if angle > max_angle:
