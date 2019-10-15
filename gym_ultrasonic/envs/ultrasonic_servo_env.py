@@ -17,12 +17,14 @@ class UltrasonicServoEnv(gym.Env):
     action_space = spaces.Box(low=-3, high=3, shape=(2,))
 
     # dist to obstacle
-    observation_space = spaces.Box(low=np.array([-90, 0]), high=np.array([90, 2000]))
+    observation_space = spaces.Box(low=np.array([-30, 0]), high=np.array([30, 2000]))
 
-    def __init__(self, servo_angular_vel=30):
+    def __init__(self, robot_speed=5, servo_angular_vel=120):
         """
         Parameters
         ----------
+        robot_speed: float
+            Robot speed multiplier.
         servo_angular_vel: float
             Servo angular velocity, degrees per sec.
         """
@@ -33,7 +35,7 @@ class UltrasonicServoEnv(gym.Env):
         servo_angle_range = (self.observation_space.low[0], self.observation_space.high[0])
 
         # robot's position will be reset later on
-        self.robot = Robot(width=120 / self.scale_down, height=90 / self.scale_down, speed=3,
+        self.robot = Robot(width=120 / self.scale_down, height=90 / self.scale_down, speed=robot_speed,
                            sensor_max_dist=self.observation_space.high[1],
                            servo_angle_range=servo_angle_range,
                            servo_angular_vel=servo_angular_vel)
@@ -128,7 +130,8 @@ class UltrasonicServoEnv(gym.Env):
         """
         if self.robot.collision(self.obstacles):
             return -500, True
-        reward = -2 + move_step - 3 * np.abs(angle_turn)
+        reward = move_step - 3 * np.abs(angle_turn)
+        print(reward, move_step)
         return reward, False
 
     @property
