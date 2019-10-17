@@ -148,7 +148,7 @@ class Robot(Obstacle):
     Robot with a mounted servo and ultrasonic range sensor.
     """
 
-    def __init__(self, width, height, speed=1., sensor_max_dist=2000, servo_angle_range=(-90, 90),
+    def __init__(self, width, height, sensor_max_dist=2000, servo_angle_range=(-90, 90),
                  servo_angular_vel=30):
         """
         Initializes the robot with the given parameters at `[0, 0]` position and `0` rotation angle.
@@ -159,9 +159,6 @@ class Robot(Obstacle):
             Robot width, mm
         height: float
             Robot height, mm
-        speed: float
-            Robot speed multiplier.
-            Default is 1.
         sensor_max_dist: float
             Ultrasonic sonar max range, mm.
             Default is 2000 mm.
@@ -171,7 +168,6 @@ class Robot(Obstacle):
             Servo angular velocity, degrees per sec.
         """
         super().__init__(position=[0., 0.], width=width, height=height, angle=0)
-        self.speed = speed
         self.sensor_max_dist = sensor_max_dist
         self.servo = _Servo(width=0.3 * self.height, height=0.5 * self.width, angle_range=servo_angle_range,
                             angular_vel=servo_angular_vel)
@@ -191,9 +187,8 @@ class Robot(Obstacle):
         Parameters
         ----------
         move_step: float
-            Move step, cm.
+            Move step, mm.
         """
-        move_step *= self.speed
         vec = np.multiply(self.direction_vector, move_step)
         self.position += vec
 

@@ -16,12 +16,10 @@ class UltrasonicServoEnv(gym.Env):
     # dist to obstacles, servo_angle
     observation_space = spaces.Box(low=np.array([0, -30]), high=np.array([2000, 30]))
 
-    def __init__(self, robot_speed=5, servo_angular_vel=120):
+    def __init__(self, servo_angular_vel=120):
         """
         Parameters
         ----------
-        robot_speed: float
-            Robot speed multiplier.
         servo_angular_vel: float or str
             Servo angular velocity, degrees per sec.
         """
@@ -32,12 +30,12 @@ class UltrasonicServoEnv(gym.Env):
         servo_angle_range = (self.observation_space.low[1], self.observation_space.high[1])
         if servo_angular_vel == 'learn':
             # vector move along main axis (mm), angle turn (degrees), servo turn (degrees)
-            self.action_space = spaces.Box(low=-3, high=3, shape=(3,))
+            self.action_space = spaces.Box(low=-12, high=12, shape=(3,))
         else:
-            self.action_space = spaces.Box(low=-3, high=3, shape=(2,))
+            self.action_space = spaces.Box(low=-12, high=12, shape=(2,))
 
         # robot's position will be reset later on
-        self.robot = Robot(width=120 / self.scale_down, height=90 / self.scale_down, speed=robot_speed,
+        self.robot = Robot(width=120 / self.scale_down, height=90 / self.scale_down,
                            sensor_max_dist=self.observation_space.high[0],
                            servo_angle_range=servo_angle_range,
                            servo_angular_vel=servo_angular_vel)
@@ -151,7 +149,7 @@ class UltrasonicServoEnv(gym.Env):
             It's not clear what the default "min dist to obstacles" is - 0, `sensor_max_dist` or a value in-between.
             But since we `update_state()` after each `reset()`, it should not matter.
         """
-        return [self.robot.sensor_max_dist, 0.]
+        return [0., 0.]
 
     def reset(self):
         """

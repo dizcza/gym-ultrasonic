@@ -30,7 +30,7 @@ class ExpandLogger(Callback):
         """ Compute training statistics of the episode when done """
         mean_q_id = self.metrics_names.index('mean_q')
         metrics = np.asarray(self.metrics)
-        metrics = metrics[~np.isnan(metrics).any(axis=0)]
+        metrics = metrics[~np.isnan(metrics).any(axis=1)]
         if metrics.shape[0] > 0:
             logs['mean_q'] = metrics[:, mean_q_id].mean()
         logs['reward_mean'] = np.mean(self.rewards)

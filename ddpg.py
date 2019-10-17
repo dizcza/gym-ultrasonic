@@ -14,6 +14,7 @@ from rl.memory import SequentialMemory
 from rl.random import OrnsteinUhlenbeckProcess
 
 from gym_ultrasonic.env_logger import ExpandLogger, DataDumpLogger
+from gym_ultrasonic.envs.processor import NormalizeNonNegative
 
 random.seed(27)
 np.random.seed(27)
@@ -25,6 +26,7 @@ env = gym.make(ENV_NAME)
 env.seed(27)
 # env = gym.wrappers.Monitor(env, "capture", force=True)
 nb_actions = env.action_space.shape[0]
+print(env)
 
 # see issue https://github.com/keras-rl/keras-rl/issues/160
 observation_space_input_shape = (1,) + env.observation_space.shape
@@ -35,9 +37,8 @@ def create_actor():
     actor = Sequential(name="actor")
     actor.add(InputLayer(input_shape=observation_space_input_shape, name="observation_input"))
     actor.add(Flatten(input_shape=observation_space_input_shape))
-    actor.add(Dense(16, activation='relu'))
-    actor.add(Dense(8, activation='relu'))
-    actor.add(Dense(nb_actions, activation='tanh'))
+    actor.add(Dense(64, activation='relu'))
+    actor.add(Dense(nb_actions, activation='sigmoid'))
     return actor
 
 
@@ -57,9 +58,13 @@ def create_actor_critic_agent():
     memory = SequentialMemory(limit=1000000, window_length=1)
     random_process = OrnsteinUhlenbeckProcess(
         size=nb_actions, theta=.5, mu=0., sigma=.1)
+    processor = NormalizeNonNegative(sensor_max_dist=env.robot.sensor_max_dist,
+                                     angle_range=env.robot.servo.angle_range,
+                                     action_scale=10)
     agent = DDPGAgent(nb_actions=nb_actions, actor=create_actor(), critic=create_critic(),
                       critic_action_input=action_input, memory=memory, nb_steps_warmup_critic=100,
-                      nb_steps_warmup_actor=100, random_process=random_process, gamma=.8, target_model_update=1e-3)
+                      nb_steps_warmup_actor=100, random_process=random_process, gamma=.8, target_model_update=1e-3,
+                      processor=processor)
     agent.compile(Adam(lr=.001), metrics=['mse'])
     return agent
 
@@ -79,12 +84,12 @@ tensorboard = TensorBoard(log_dir="logs", write_grads=False, write_graph=False)
 checkpoint = ModelCheckpoint(str(WEIGHTS_PATH), save_weights_only=True, period=10)
 shutil.rmtree(tensorboard.log_dir, ignore_errors=True)
 
-# agent.fit(env, nb_steps=50000, visualize=0, verbose=0, nb_max_episode_steps=1000,
-#           callbacks=[expand_logger, tensorboard, checkpoint])
+agent.fit(env, nb_steps=50000, visualize=0, verbose=0, nb_max_episode_steps=1000,
+          callbacks=[expand_logger, tensorboard, checkpoint])
 
 # save the weights
-# agent.save_weights(WEIGHTS_PATH, overwrite=True)
+agent.save_weights(WEIGHTS_PATH, overwrite=True)
 
 # test
-agent.test(env, nb_episodes=3, visualize=0, nb_max_episode_steps=5000, callbacks=[dump_logger])
+# agent.test(env, nb_episodes=3, visualize=0, nb_max_episode_steps=5000, callbacks=[dump_logger])
 # env.close()
