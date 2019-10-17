@@ -13,12 +13,12 @@ from rl.agents import DDPGAgent
 from rl.memory import SequentialMemory
 from rl.random import OrnsteinUhlenbeckProcess
 
-from gym_ultrasonic.env_logger import UltrasonicLogger
+from gym_ultrasonic.env_logger import ExpandLogger, DataDumpLogger
 
 random.seed(27)
 np.random.seed(27)
 
-ENV_NAME = 'UltrasonicServo-v2'
+ENV_NAME = 'UltrasonicServo-v1'
 
 # Get the environment and extract the number of actions.
 env = gym.make(ENV_NAME)
@@ -64,22 +64,27 @@ def create_actor_critic_agent():
     return agent
 
 
-agent = create_actor_critic_agent()
-WEIGHTS_PATH = Path('weights') / 'ddpg_{}_weights.h5'.format(ENV_NAME)
+DATA_PATH = Path('data') / f'{ENV_NAME}.csv'
+DATA_PATH.parent.mkdir(exist_ok=True)
+WEIGHTS_PATH = Path('weights') / f'ddpg_{ENV_NAME}.h5'
 WEIGHTS_PATH.parent.mkdir(exist_ok=True)
 
-env_logger = UltrasonicLogger()
+agent = create_actor_critic_agent()
+agent.load_weights(WEIGHTS_PATH)
+# agent.actor.save('weights/actor.h5')
+
+expand_logger = ExpandLogger()
+dump_logger = DataDumpLogger(fpath=DATA_PATH)
 tensorboard = TensorBoard(log_dir="logs", write_grads=False, write_graph=False)
 checkpoint = ModelCheckpoint(str(WEIGHTS_PATH), save_weights_only=True, period=10)
 shutil.rmtree(tensorboard.log_dir, ignore_errors=True)
 
-agent.load_weights(WEIGHTS_PATH)
-agent.fit(env, nb_steps=50000, visualize=0, verbose=0, nb_max_episode_steps=1000,
-          callbacks=[env_logger, tensorboard, checkpoint])
+# agent.fit(env, nb_steps=50000, visualize=0, verbose=0, nb_max_episode_steps=1000,
+#           callbacks=[expand_logger, tensorboard, checkpoint])
 
 # save the weights
-agent.save_weights(WEIGHTS_PATH, overwrite=True)
+# agent.save_weights(WEIGHTS_PATH, overwrite=True)
 
 # test
-# agent.test(env, nb_episodes=3, visualize=True, nb_max_episode_steps=5000)
+agent.test(env, nb_episodes=3, visualize=0, nb_max_episode_steps=5000, callbacks=[dump_logger])
 # env.close()

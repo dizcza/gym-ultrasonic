@@ -22,8 +22,8 @@ def convert_keras_model(keras_model):
             elif keras_layer.activation is keras.activations.tanh:
                 torch_layers.append(nn.Tanh())
             elif keras_layer.activation is not keras.activations.linear:
-                # linear is identify function by default
-                raise ValueError(f"Invalid activation func: '{keras_layer.activation}'")
+                # linear is identity function by default
+                raise ValueError(f"Unknown activation func: '{keras_layer.activation}'")
     actor = nn.Sequential(*torch_layers)
     actor.eval()
     for param in actor.parameters():

@@ -1,10 +1,8 @@
-import warnings
-
 import numpy as np
 from keras.callbacks import Callback
 
 
-class UltrasonicLogger(Callback):
+class ExpandLogger(Callback):
     """
     Acts as `BaseLogger` to expand logs with the average of observations, actions, mean_q, etc.
     """
@@ -31,10 +29,10 @@ class UltrasonicLogger(Callback):
     def on_episode_end(self, episode, logs=None):
         """ Compute training statistics of the episode when done """
         mean_q_id = self.metrics_names.index('mean_q')
-        with warnings.catch_warnings():
-            warnings.filterwarnings('error')
-            # first episode results in all nan values
-            logs['mean_q'] = np.nanmean(self.metrics, axis=0)[mean_q_id]
+        metrics = np.asarray(self.metrics)
+        metrics = metrics[~np.isnan(metrics).any(axis=0)]
+        if metrics.shape[0] > 0:
+            logs['mean_q'] = metrics[:, mean_q_id].mean()
         logs['reward_mean'] = np.mean(self.rewards)
         actions_mean = np.mean(self.actions, axis=0)
         logs['robot_move'] = actions_mean[0]
@@ -49,3 +47,37 @@ class UltrasonicLogger(Callback):
         self.actions.append(logs['action'])
         self.metrics.append(logs['metrics'])
         self.step += 1
+
+
+class DataDumpLogger(Callback):
+    def __init__(self, fpath):
+        super().__init__()
+        self.fpath = fpath
+        self.observations = []
+        self.rewards = []
+        self.actions = []
+
+    def on_episode_begin(self, episode, logs=None):
+        self.observations.append([])
+        self.rewards.append([])
+        self.actions.append([])
+
+    def on_step_end(self, step, logs=None):
+        self.observations[-1].append(logs['observation'])
+        self.rewards[-1].append(logs['reward'])
+        self.actions[-1].append(logs['action'])
+
+    def on_train_end(self, logs=None):
+        episode_id = []
+        for episode, obs_episode in enumerate(self.observations):
+            episode_id.append(np.repeat(episode, len(obs_episode)))
+        episode_id = np.hstack(episode_id)
+        observations = np.vstack(self.observations)
+        rewards = np.hstack(self.rewards)
+        actions = np.vstack(self.actions)
+        observation_head = ['dist_to_obstacles', 'servo_angle']
+        if observations.shape[1] > 2:
+            observation_head.append('servo_turn')
+        header = ['episode', *observation_head, 'robot_move', 'robot_turn', 'reward']
+        data = np.c_[episode_id, observations, actions, rewards]
+        np.savetxt(self.fpath, data, fmt='%.5f', delimiter=',', header=','.join(header), comments='')

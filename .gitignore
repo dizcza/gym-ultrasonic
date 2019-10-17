@@ -7,6 +7,7 @@ logs/
 ignored/
 capture/
 weights/
+data/
 .pytest_cache/
 *.py[cod]
 *.egg-info/
