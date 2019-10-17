@@ -13,8 +13,8 @@ from .obstacle import Robot, Obstacle
 class UltrasonicServoEnv(gym.Env):
     metadata = {'render.modes': ['human', 'rgb_array']}
 
-    # servo angle, dist to obstacle
-    observation_space = spaces.Box(low=np.array([-30, 0]), high=np.array([30, 2000]))
+    # dist to obstacles, servo_angle
+    observation_space = spaces.Box(low=np.array([0, -30]), high=np.array([2000, 30]))
 
     def __init__(self, robot_speed=5, servo_angular_vel=120):
         """
@@ -29,7 +29,7 @@ class UltrasonicServoEnv(gym.Env):
         self.scale_down = 5
         self.width = self.height = 3000 // self.scale_down
 
-        servo_angle_range = (self.observation_space.low[0], self.observation_space.high[0])
+        servo_angle_range = (self.observation_space.low[1], self.observation_space.high[1])
         if servo_angular_vel == 'learn':
             # vector move along main axis (mm), angle turn (degrees), servo turn (degrees)
             self.action_space = spaces.Box(low=-3, high=3, shape=(3,))
@@ -38,7 +38,7 @@ class UltrasonicServoEnv(gym.Env):
 
         # robot's position will be reset later on
         self.robot = Robot(width=120 / self.scale_down, height=90 / self.scale_down, speed=robot_speed,
-                           sensor_max_dist=self.observation_space.high[1],
+                           sensor_max_dist=self.observation_space.high[0],
                            servo_angle_range=servo_angle_range,
                            servo_angular_vel=servo_angular_vel)
 

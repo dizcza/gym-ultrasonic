@@ -302,4 +302,4 @@ class Robot(Obstacle):
         self.servo.reset()
 
     def extra_repr(self):
-        return f"{super().extra_repr()} with a {self.servo}"
+        return f"{super().extra_repr()}, servo={self.servo}, sensor_max_dist={self.sensor_max_dist}"
