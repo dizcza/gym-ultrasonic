@@ -16,12 +16,14 @@ class UltrasonicServoEnv(gym.Env):
     # dist to obstacles, servo_angle
     observation_space = spaces.Box(low=np.array([0, -30]), high=np.array([2000, 30]))
 
-    def __init__(self, servo_angular_vel=120):
+    def __init__(self, servo_angular_vel=120, n_obstacles=4):
         """
         Parameters
         ----------
         servo_angular_vel: float or str
             Servo angular velocity, degrees per sec.
+        n_obstacles: int
+            Num. of obstacles on the scene.
         """
         super().__init__()
         self.scale_down = 5
@@ -54,7 +56,7 @@ class UltrasonicServoEnv(gym.Env):
 
         sample_obstacle_size = lambda: random.randint(self.robot.height // 2, self.robot.width * 3)
 
-        for random_obstacle_id in range(15):
+        for random_obstacle_id in range(n_obstacles):
             obst = Obstacle(position=random.sample(range(self.width), k=2),
                             width=sample_obstacle_size(),
                             height=sample_obstacle_size(),
@@ -216,4 +218,5 @@ class UltrasonicServoEnv(gym.Env):
     def __str__(self):
         return f"{super().__str__()}:\nobservation_space={self.observation_space.low, self.observation_space.high};" \
                f"\naction_space={self.action_space.low, self.action_space.high};" \
-               f"\n{self.robot}"
+               f"\n{self.robot};" \
+               f"\nnum. of obstacles: {len(self.obstacles) - 4}"  # 4 walls

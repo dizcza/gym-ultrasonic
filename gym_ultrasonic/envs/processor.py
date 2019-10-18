@@ -1,6 +1,7 @@
-from rl.core import Processor
 from typing import List
+
 import numpy as np
+from rl.core import Processor
 
 
 class NormalizeNonNegative(Processor):
