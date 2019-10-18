@@ -7,21 +7,26 @@ import numpy as np
 from gym import spaces
 from gym.envs.classic_control import rendering
 
-from .obstacle import Robot, Obstacle
+from .obstacle import Robot, Obstacle, Servo
 
 
-class UltrasonicServoEnv(gym.Env):
+class UltrasonicEnv(gym.Env):
+    """
+    A robot with one Ultrasonic sonar sensor, trying to avoid obstacles. Never stops (no target).
+    """
+    
     metadata = {'render.modes': ['human', 'rgb_array']}
 
-    # dist to obstacles, servo_angle
-    observation_space = spaces.Box(low=np.array([0, -30]), high=np.array([2000, 30]))
+    # dist to obstacles
+    observation_space = spaces.Box(low=0., high=2000., shape=(1,))
 
-    def __init__(self, servo_angular_vel=120, n_obstacles=4):
+    # vector move along main axis (mm), angle turn (degrees)
+    action_space = spaces.Box(low=-12, high=12, shape=(2,))
+
+    def __init__(self, n_obstacles=4):
         """
         Parameters
         ----------
-        servo_angular_vel: float or str
-            Servo angular velocity, degrees per sec.
         n_obstacles: int
             Num. of obstacles on the scene.
         """
@@ -29,18 +34,9 @@ class UltrasonicServoEnv(gym.Env):
         self.scale_down = 5
         self.width = self.height = 3000 // self.scale_down
 
-        servo_angle_range = (self.observation_space.low[1], self.observation_space.high[1])
-        if servo_angular_vel == 'learn':
-            # vector move along main axis (mm), angle turn (degrees), servo turn (degrees)
-            self.action_space = spaces.Box(low=-12, high=12, shape=(3,))
-        else:
-            self.action_space = spaces.Box(low=-12, high=12, shape=(2,))
-
         # robot's position will be reset later on
         self.robot = Robot(width=120 / self.scale_down, height=90 / self.scale_down,
-                           sensor_max_dist=self.observation_space.high[0],
-                           servo_angle_range=servo_angle_range,
-                           servo_angular_vel=servo_angular_vel)
+                           sensor_max_dist=self.observation_space.high[0])
 
         wall_size = 10
         indent = wall_size + max(self.robot.width, self.robot.height)
@@ -76,19 +72,22 @@ class UltrasonicServoEnv(gym.Env):
 
     def step(self, action):
         """
-        Make a single step of:
-            1) moving forward with the speed `action[0]`;
-            2) rotating by `action[1]` degrees.
-
+        Make a single step:
+            1) move forward by `action[0]` mm;
+            2) rotate by `action[1]` degrees;
+            3) rotate servo by `action[2]` degrees (`UltrasonicServoEnv` with learnable servo).
+               `action[2]` is None for `UltrasonicEnv` and `UltrasonicServoEnv` with servo that has fixed angular
+               velocity.
+        
         Parameters
         ----------
         action: List[float]
-            Speed and angle actions for the next step.
+            Env action to perform.
 
         Returns
         -------
         observation: List[float]
-            A list that contains one value - min dist to an obstacle, if any, on its way.
+            A list that contains one value - min dist to an obstacle on its way.
         reward: float
             A reward, obtained by taking this `action`.
         done: bool
@@ -103,16 +102,19 @@ class UltrasonicServoEnv(gym.Env):
         self.robot.turn(robot_turn)
         self.robot.servo.rotate(servo_turn)
         reward, done = self.reward(move_step, robot_turn, servo_turn)
-        self.update_state()
+        self.state = self.update_state()
         info = {}
         return self.state, reward, done, info
 
     def update_state(self):
         """
-        Updates the env state which is a list, containing two values: min dist to obstacles and servo rotation angle.
+        Returns
+        -------
+        state: List[float]
+            Min dist to obstacles.
         """
         min_dist, _ = self.robot.ray_cast(self.obstacles)
-        self.state = [min_dist, self.robot.servo.angle]
+        return [min_dist]
 
     def reward(self, move_step, angle_turn, servo_turn):
         """
@@ -147,11 +149,11 @@ class UltrasonicServoEnv(gym.Env):
         Returns
         -------
         List[float]
-            Initial env state (observation).
+            Initial env state (observation) which is the min dist to obstacles.
             It's not clear what the default "min dist to obstacles" is - 0, `sensor_max_dist` or a value in-between.
             But since we `update_state()` after each `reset()`, it should not matter.
         """
-        return [0., 0.]
+        return [0.]
 
     def reset(self):
         """
@@ -161,7 +163,7 @@ class UltrasonicServoEnv(gym.Env):
         self.robot.reset(box=self.allowed_space)
         while self.robot.collision(self.obstacles):
             self.robot.reset(box=self.allowed_space)
-        self.update_state()
+        self.state = self.update_state()
         return self.state
 
     def init_view(self):
@@ -220,3 +222,57 @@ class UltrasonicServoEnv(gym.Env):
                f"\naction_space={self.action_space.low, self.action_space.high};" \
                f"\n{self.robot};" \
                f"\nnum. of obstacles: {len(self.obstacles) - 4}"  # 4 walls
+
+
+class UltrasonicServoEnv(UltrasonicEnv):
+    """
+    A robot with one Ultrasonic sonar sensor and a servo that rotates the sonar.
+    The task is the same: avoid obstacles. Never stops (no target).
+    """
+    
+    metadata = {'render.modes': ['human', 'rgb_array']}
+
+    # dist to obstacles, servo_angle
+    observation_space = spaces.Box(low=np.array([UltrasonicEnv.observation_space.low[0], -30]),
+                                   high=np.array([UltrasonicEnv.observation_space.high[0], 30]))
+
+    def __init__(self, n_obstacles=4, servo_angular_vel=120):
+        """
+        Parameters
+        ----------
+        n_obstacles: int
+            Num. of obstacles on the scene.
+        servo_angular_vel: float or str
+            Servo angular velocity, degrees per sec.
+        """
+        super().__init__(n_obstacles=n_obstacles)
+        if servo_angular_vel == 'learn':
+            # vector move along main axis (mm), angle turn (degrees), servo turn (degrees)
+            self.action_space = spaces.Box(low=-12, high=12, shape=(3,))
+        _servo = self.robot.servo
+        servo_angle_range = (self.observation_space.low[1], self.observation_space.high[1])
+        self.robot.servo = Servo(_servo.width, _servo.height, angle_range=servo_angle_range,
+                                 angular_vel=servo_angular_vel)
+
+    @property
+    def init_state(self):
+        """
+        Returns
+        -------
+        List[float]
+            Initial env state (observation).
+            It's not clear what the default "min dist to obstacles" is - 0, `sensor_max_dist` or a value in-between.
+            But since we `update_state()` after each `reset()`, it should not matter.
+        """
+        return [0., 0.]
+
+    def update_state(self):
+        """
+        Returns
+        -------
+        state: List[float]
+            Min dist to obstacles and servo rotation angle.
+        """
+        state = super().update_state()
+        state.append(self.robot.servo.angle)
+        return state

@@ -37,7 +37,7 @@ class ExpandLogger(Callback):
         actions_mean = np.mean(self.actions, axis=0)
         logs['robot_move'] = actions_mean[0]
         logs['robot_turn'] = actions_mean[1]
-        logs['dist_to_obstacles'] = np.mean(self.observations, axis=0)[1]
+        logs['dist_to_obstacles'] = np.mean(self.observations, axis=0)[0]
         del logs['nb_steps']  # don't show total num. of steps
 
     def on_step_end(self, step, logs=None):

@@ -1,16 +1,15 @@
 from gym.envs.registration import register
 
-# Without a servo (zero angular velocity).
+# No servo
 register(
-    id='UltrasonicServo-v0',
-    entry_point='gym_ultrasonic.envs:UltrasonicServoEnv',
-    kwargs={"servo_angular_vel": 0},  # turn servo off
+    id='Ultrasonic-v0',
+    entry_point='gym_ultrasonic.envs:UltrasonicEnv',
     max_episode_steps=1000,
 )
 
-# With a servo.
+# Servo with a fixed angular velocity
 register(
-    id='UltrasonicServo-v1',
+    id='UltrasonicServo-v0',
     entry_point='gym_ultrasonic.envs:UltrasonicServoEnv',
     max_episode_steps=1000,
 )
@@ -18,7 +17,7 @@ register(
 
 # With a servo. Rotation angle is predicted by the actor
 register(
-    id='UltrasonicServo-v2',
+    id='UltrasonicServo-v1',
     entry_point='gym_ultrasonic.envs:UltrasonicServoEnv',
     kwargs={"servo_angular_vel": 'learn'},
     max_episode_steps=1000,

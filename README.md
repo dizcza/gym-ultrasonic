@@ -8,11 +8,19 @@
 
 ### Environment
 
-`UltrasonicServo-v0` (`AutonomousRobot-v1` in the [original repo](https://github.com/lelmac/robotsim)) - Ultrasonic sonar sensor (without a moving servo), mounted on top of a robot (small red rectangle), heads forward.
+Adapted from https://github.com/lelmac/robotsim (originally, `AutonomousRobot-v1`).
 
-`UltrasonicServo-v1` - Ultrasonic sonar sensor with a moving servo (that rotates the sonar sensor).
+`Ultrasonic-v0` - Ultrasonic sonar sensor (without a moving servo), mounted on top of a robot (small red rectangle), heads forward.
+
+`UltrasonicServo-v0` - Ultrasonic sonar sensor with a servo that has fixed angular velocity.
+
+`UltrasonicServo-v1` - Ultrasonic sonar sensor with a servo that learns how to rotate the sensor.
+
 
 ## Setup
+
+Requires Python 3.6+
+
 ```bash
 pip install -r requirements.txt
 python ddpg.py

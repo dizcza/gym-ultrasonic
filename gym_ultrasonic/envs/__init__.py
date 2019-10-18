@@ -1,1 +1,1 @@
-from gym_ultrasonic.envs.ultrasonic_servo_env import UltrasonicServoEnv
+from gym_ultrasonic.envs.ultrasonic_servo_env import UltrasonicEnv, UltrasonicServoEnv

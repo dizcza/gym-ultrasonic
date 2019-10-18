@@ -78,7 +78,48 @@ class Obstacle:
         return f"{self.width} x {self.height}"
 
 
-class _Servo(Obstacle):
+class ServoStub(Obstacle):
+    """
+    Servo stub that cannot rotate.
+    """
+
+    def __init__(self, width, height, angle_range=None):
+        """
+        Parameters
+        ----------
+        width: float
+            Servo width, mm
+        height: float
+            Servo height, mm
+        angle_range: Tuple[float]
+            Min and max rotation angles, degrees.
+            Has no effect for `ServoStub`.
+        """
+        super().__init__(position=[0, 0], width=width, height=height, angle=0)
+        self.angle_range = angle_range
+
+    def rotate(self, angle_turn=None):
+        """
+        Does nothing.
+
+        Parameters
+        ----------
+        angle_turn: float
+            Angle to rotate the servo. Ignored.
+        """
+        pass
+
+    def reset(self):
+        """
+        Resets the servo.
+        """
+        pass
+
+    def extra_repr(self):
+        return f"angle_range={self.angle_range}"
+
+
+class Servo(ServoStub):
     """
     Servo that holds sonar on board.
     Servo has only one function - rotate the sonar.
@@ -97,8 +138,7 @@ class _Servo(Obstacle):
         angular_vel: float or str
             Rotation degrees per second.
         """
-        super().__init__(position=[0, 0], width=width, height=height, angle=0)
-        self.angle_range = angle_range
+        super().__init__(width=width, height=height, angle_range=angle_range)
         self.angular_vel = angular_vel
         self.tick = None
         self.ccw = 1
@@ -140,7 +180,7 @@ class _Servo(Obstacle):
         self.angle = 0
 
     def extra_repr(self):
-        return f"angle_range={self.angle_range}, angular_vel={self.angular_vel}"
+        return f"{super().extra_repr()}, angular_vel={self.angular_vel}"
 
 
 class Robot(Obstacle):
@@ -148,8 +188,7 @@ class Robot(Obstacle):
     Robot with a mounted servo and ultrasonic range sensor.
     """
 
-    def __init__(self, width, height, sensor_max_dist=2000, servo_angle_range=(-90, 90),
-                 servo_angular_vel=30):
+    def __init__(self, width, height, sensor_max_dist=2000, servo=None):
         """
         Initializes the robot with the given parameters at `[0, 0]` position and `0` rotation angle.
 
@@ -162,15 +201,12 @@ class Robot(Obstacle):
         sensor_max_dist: float
             Ultrasonic sonar max range, mm.
             Default is 2000 mm.
-        servo_angle_range: Tuple[float]
-            Servo min and max rotation angles, degrees.
-        servo_angular_vel: float
-            Servo angular velocity, degrees per sec.
         """
         super().__init__(position=[0., 0.], width=width, height=height, angle=0)
         self.sensor_max_dist = sensor_max_dist
-        self.servo = _Servo(width=0.3 * self.height, height=0.5 * self.width, angle_range=servo_angle_range,
-                            angular_vel=servo_angular_vel)
+        if servo is None:
+            servo = ServoStub(width=0.3 * self.height, height=0.5 * self.width)
+        self.servo = servo
 
     @property
     def servo_shift(self):

@@ -6,10 +6,10 @@ from rl.core import Processor
 
 class NormalizeNonNegative(Processor):
     
-    def __init__(self, sensor_max_dist, angle_range, action_scale):
+    def __init__(self, sensor_max_dist, action_scale, angle_range):
         self.sensor_max_dist = sensor_max_dist
-        self.angle_range = angle_range
         self.action_scale = action_scale
+        self.angle_range = angle_range
     
     def process_observation(self, observation):
         """
@@ -28,9 +28,12 @@ class NormalizeNonNegative(Processor):
             Normalized observation in range `[0, 1]`.
         """
         dist_norm = observation[0] / self.sensor_max_dist
-        angle_min, angle_max = self.angle_range
-        angle_norm = (observation[1] - angle_min) / (angle_max - angle_min)
-        observation_norm = [dist_norm, angle_norm]
+        observation_norm = [dist_norm]
+        if len(observation) > 1:
+            assert self.angle_range is not None, "Make sure you use `UltrasonicServoEnv`"
+            angle_min, angle_max = self.angle_range
+            angle_norm = (observation[1] - angle_min) / (angle_max - angle_min)
+            observation_norm.append(angle_norm)
         return observation_norm
 
     def process_action(self, action_sigm):
