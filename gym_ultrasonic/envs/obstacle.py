@@ -94,6 +94,7 @@ class ServoStub(Obstacle):
         angle_range: Tuple[float]
             Min and max rotation angles, degrees.
             Has no effect for `ServoStub`.
+            Default is `None`.
         """
         super().__init__(position=[0, 0], width=width, height=height, angle=0)
         self.angle_range = angle_range

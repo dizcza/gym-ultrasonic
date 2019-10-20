@@ -75,10 +75,8 @@ class UltrasonicEnv(gym.Env):
         Make a single step:
             1) move forward by `action[0]` mm;
             2) rotate by `action[1]` degrees;
-            3) rotate servo by `action[2]` degrees (`UltrasonicServoEnv` with learnable servo).
-               `action[2]` is None for `UltrasonicEnv` and `UltrasonicServoEnv` with servo that has fixed angular
-               velocity.
-        
+            3) rotate servo by `action[2]` degrees (`UltrasonicServoEnv-v1` only).
+
         Parameters
         ----------
         action: List[float]

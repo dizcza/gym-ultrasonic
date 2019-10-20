@@ -9,6 +9,8 @@ capture/
 weights/
 data/
 temp/
+papers/
+videos/
 .pytest_cache/
 *.py[cod]
 *.egg-info/
