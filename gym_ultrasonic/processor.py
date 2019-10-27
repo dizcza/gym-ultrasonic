@@ -1,26 +1,12 @@
-from typing import List, Tuple
+from typing import List
 
 import numpy as np
 from rl.core import Processor
 
+from gym_ultrasonic.envs.constants import SERVO_ANGLE_MAX, SENSOR_DIST_MAX, WHEEL_VELOCITY_MAX
 
-class NormalizeNonNegative(Processor):
-    
-    def __init__(self, sensor_max_dist, action_scale, angle_range):
-        """
-        Parameters
-        ----------
-        sensor_max_dist: float
-            Max Ultrasonic sensor dist.
-        action_scale: Union[float, List[float]]
-            Scale actor network output before feeding it in the env.
-        angle_range: Tuple[float]
-            Servo angle range.
-            `None` for `UltrasonicEnv`.
-        """
-        self.sensor_max_dist = sensor_max_dist
-        self.action_scale = action_scale
-        self.angle_range = angle_range
+
+class UnitsProcessor(Processor):
     
     def process_observation(self, observation):
         """
@@ -39,13 +25,11 @@ class NormalizeNonNegative(Processor):
         observation_norm: List[float]
             Normalized `observation` in range `[0, 1]`.
         """
-        dist_norm = observation[0] / self.sensor_max_dist
+        dist_norm = observation[0] / SENSOR_DIST_MAX
         observation_norm = [dist_norm]
         if len(observation) > 1:
-            assert self.angle_range is not None, "Make sure you use `UltrasonicServoEnv`"
-            angle_min, angle_max = self.angle_range
-            angle_norm = (observation[1] - angle_min) / (angle_max - angle_min)
-            observation_norm.append(angle_norm)
+            servo_angle_norm = (observation[1] + SERVO_ANGLE_MAX) / (2 * SERVO_ANGLE_MAX)
+            observation_norm.append(servo_angle_norm)
         return observation_norm
 
     def process_action(self, action_tanh):
@@ -64,5 +48,5 @@ class NormalizeNonNegative(Processor):
         action_tanh: np.ndarray
             Scaled action in range `[-action_scale, action_scale]`.
         """
-        action_tanh = action_tanh * self.action_scale
+        action_tanh = action_tanh * WHEEL_VELOCITY_MAX
         return action_tanh

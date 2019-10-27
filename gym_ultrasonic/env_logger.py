@@ -1,5 +1,6 @@
 import numpy as np
 from keras.callbacks import Callback
+from collections import defaultdict
 
 
 class ExpandLogger(Callback):
@@ -14,6 +15,7 @@ class ExpandLogger(Callback):
         self.actions = []
         self.metrics = []
         self.metrics_names = []
+        self.info = defaultdict(list)
         self.step = 0
 
     def on_train_begin(self, logs=None):
@@ -34,10 +36,11 @@ class ExpandLogger(Callback):
         if metrics.shape[0] > 0:
             logs['mean_q'] = metrics[:, mean_q_id].mean()
         logs['reward_mean'] = np.mean(self.rewards)
-        actions_mean = np.mean(self.actions, axis=0)
-        logs['robot_move'] = actions_mean[0]
-        logs['robot_turn'] = actions_mean[1]
+        logs['wheel_vel_sum'] = np.sum(self.actions, axis=1).mean()
+        logs['wheel_vel_diff'] = np.abs(np.diff(self.actions, axis=1)).mean()
         logs['dist_to_obstacles'] = np.mean(self.observations, axis=0)[0]
+        for info_key, info_values in self.info.items():
+            logs[info_key] = np.mean(info_values)
         del logs['nb_steps']  # don't show total num. of steps
 
     def on_step_end(self, step, logs=None):
@@ -46,6 +49,8 @@ class ExpandLogger(Callback):
         self.rewards.append(logs['reward'])
         self.actions.append(logs['action'])
         self.metrics.append(logs['metrics'])
+        for info_key, info_value in logs['info'].items():
+            self.info[info_key].append(info_value)
         self.step += 1
 
 
@@ -78,6 +83,6 @@ class DataDumpLogger(Callback):
         observation_head = ['dist_to_obstacles', 'servo_angle']
         if observations.shape[1] > 2:
             observation_head.append('servo_turn')
-        header = ['episode', *observation_head, 'robot_move', 'robot_turn', 'reward']
+        header = ['episode', *observation_head, 'wheel_left', 'wheel_right', 'reward']
         data = np.c_[episode_id, observations, actions, rewards]
         np.savetxt(self.fpath, data, fmt='%.5f', delimiter=',', header=','.join(header), comments='')

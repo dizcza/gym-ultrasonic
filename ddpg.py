@@ -14,7 +14,7 @@ from rl.memory import SequentialMemory
 from rl.random import OrnsteinUhlenbeckProcess
 
 from gym_ultrasonic.env_logger import ExpandLogger, DataDumpLogger
-from gym_ultrasonic.envs.processor import NormalizeNonNegative
+from gym_ultrasonic.processor import UnitsProcessor
 from gym_ultrasonic.envs.constants import WHEEL_VELOCITY_MAX
 
 random.seed(27)
@@ -23,7 +23,7 @@ np.random.seed(27)
 ENV_NAME = 'UltrasonicServo-v0'
 
 # Get the environment and extract the number of actions.
-env = gym.make(ENV_NAME)
+env = gym.make(ENV_NAME, time_step=0.1)
 env.seed(27)
 # env = gym.wrappers.Monitor(env, "capture", force=True)
 nb_actions = env.action_space.shape[0]
@@ -59,13 +59,10 @@ def create_actor_critic_agent():
     memory = SequentialMemory(limit=1000000, window_length=1)
     random_process = OrnsteinUhlenbeckProcess(
         size=nb_actions, theta=.5, mu=0., sigma=.1)
-    processor = NormalizeNonNegative(sensor_max_dist=env.robot.sensor_max_dist,
-                                     angle_range=env.robot.servo.angle_range,
-                                     action_scale=WHEEL_VELOCITY_MAX)
     agent = DDPGAgent(nb_actions=nb_actions, actor=create_actor(), critic=create_critic(),
                       critic_action_input=action_input, memory=memory, nb_steps_warmup_critic=100,
                       nb_steps_warmup_actor=100, random_process=random_process, gamma=.8, target_model_update=1e-3,
-                      processor=processor)
+                      processor=UnitsProcessor())
     agent.compile(Adam(lr=.001), metrics=['mse'])
     return agent
 
@@ -76,7 +73,7 @@ WEIGHTS_PATH = Path('weights') / f'ddpg_{ENV_NAME}.h5'
 WEIGHTS_PATH.parent.mkdir(exist_ok=True)
 
 agent = create_actor_critic_agent()
-agent.load_weights(WEIGHTS_PATH)
+# agent.load_weights(WEIGHTS_PATH)
 # agent.actor.save('weights/actor.h5')
 
 expand_logger = ExpandLogger()
@@ -85,7 +82,7 @@ tensorboard = TensorBoard(log_dir="logs", write_grads=False, write_graph=False)
 checkpoint = ModelCheckpoint(str(WEIGHTS_PATH), save_weights_only=True, period=10)
 shutil.rmtree(tensorboard.log_dir, ignore_errors=True)
 
-agent.fit(env, nb_steps=50000, visualize=1, verbose=0, nb_max_episode_steps=1000,
+agent.fit(env, nb_steps=50000, visualize=1, verbose=2, nb_max_episode_steps=1000,
           callbacks=[expand_logger, tensorboard, checkpoint])
 
 # save the weights

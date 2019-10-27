@@ -10,6 +10,8 @@ from shapely import affinity
 from shapely import speedups
 from shapely.geometry import Polygon, LineString
 
+from .constants import SENSOR_DIST_MAX
+
 if not speedups.enabled:
     warnings.warn("Install Cython to enable shapely speedups")
 
@@ -191,7 +193,7 @@ class Robot(Obstacle):
     Robot with a mounted servo and ultrasonic range sensor.
     """
 
-    def __init__(self, width, height, sensor_max_dist=2000, servo=None):
+    def __init__(self, width, height, sensor_max_dist=SENSOR_DIST_MAX, servo=None):
         """
         Initializes the robot with the given parameters at `[0, 0]` position and `0` rotation angle.
 
@@ -203,7 +205,7 @@ class Robot(Obstacle):
             Robot height, mm
         sensor_max_dist: float
             Ultrasonic sonar max range, mm.
-            Default is 2000 mm.
+            Default is `SENSOR_MAX_DIST`.
         """
         super().__init__(position=[0., 0.], width=width, height=height, angle=0)
         self.sensor_max_dist = sensor_max_dist

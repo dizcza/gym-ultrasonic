@@ -9,7 +9,7 @@ from gym.envs.classic_control import rendering
 from shapely.geometry import LineString
 
 from .obstacle import Robot, Obstacle, Servo
-from .constants import WHEEL_VELOCITY_MAX, SERVO_ANGLE_MAX
+from .constants import WHEEL_VELOCITY_MAX, SERVO_ANGLE_MAX, SENSOR_DIST_MAX, ROBOT_HEIGHT, ROBOT_WIDTH
 
 
 class UltrasonicEnv(gym.Env):
@@ -20,7 +20,7 @@ class UltrasonicEnv(gym.Env):
     metadata = {'render.modes': ['human', 'rgb_array']}
 
     # dist to obstacles
-    observation_space = spaces.Box(low=0., high=2000., shape=(1,))
+    observation_space = spaces.Box(low=0., high=SENSOR_DIST_MAX, shape=(1,))
 
     # wheels velocity, mm/s
     # action space box is slightly larger because of the additive noise
@@ -39,8 +39,7 @@ class UltrasonicEnv(gym.Env):
         self.width = self.height = 3000 // self.scale_down
 
         # robot's position will be reset later on
-        self.robot = Robot(width=115 / self.scale_down, height=140 / self.scale_down,
-                           sensor_max_dist=self.observation_space.high[0])
+        self.robot = Robot(width=ROBOT_WIDTH / self.scale_down, height=ROBOT_HEIGHT / self.scale_down)
 
         wall_size = 10
         indent = wall_size + max(self.robot.width, self.robot.height)
@@ -100,12 +99,12 @@ class UltrasonicEnv(gym.Env):
         """
         vel_left, vel_right = action[:2]
         servo_turn = action[2] if len(action) == 3 else None
-        move_step, robot_turn, trajectory = self.robot.diffdrive(vel_left, vel_right, sim_time=self.time_step)
+        move_step, angle_rotate, trajectory = self.robot.diffdrive(vel_left, vel_right, sim_time=self.time_step)
         self._current_trajectory = trajectory
         self.robot.servo.rotate(servo_turn)
-        reward, done = self.reward(trajectory, move_step, robot_turn, servo_turn)
+        reward, done = self.reward(trajectory, move_step, angle_rotate, servo_turn)
         self.state = self.update_state()
-        info = {}
+        info = dict(move_step=move_step, angle_rotate=angle_rotate)
         return self.state, reward, done, info
 
     def update_state(self):
@@ -118,7 +117,7 @@ class UltrasonicEnv(gym.Env):
         min_dist, _ = self.robot.ray_cast(self.obstacles)
         return [min_dist]
 
-    def reward(self, trajectory, move_step, angle_turn, servo_turn):
+    def reward(self, trajectory, move_step, angle_rotate, servo_turn):
         """
         Computes the reward.
 
@@ -128,7 +127,7 @@ class UltrasonicEnv(gym.Env):
             Trajectory of this step.
         move_step: float
             Move robot with `move_step` mm along its main axis.
-        angle_turn: float
+        angle_rotate: float
             Turn robot by `angle_turn` radians.
         servo_turn: float
             Turn servo by `servo_turn` radians, if not None.
@@ -145,7 +144,7 @@ class UltrasonicEnv(gym.Env):
         for obstacle in self.obstacles:
             if obstacle.polygon.intersects(trajectory):
                 return -1000, True
-        reward = -1 + move_step / WHEEL_VELOCITY_MAX - 3 * abs(angle_turn)
+        reward = -1 + move_step / WHEEL_VELOCITY_MAX - 3 * abs(angle_rotate)
         # print(abs(angle_turn))
         if servo_turn is not None:
             reward -= abs(servo_turn)
