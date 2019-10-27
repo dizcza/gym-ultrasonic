@@ -30,7 +30,7 @@ class Obstacle:
         height: float
             Obstacle height, mm
         angle: float
-            Obstacle rotation angle in degrees.
+            Obstacle rotation angle in radians.
             Positive angles are counter-clockwise and negative are clockwise rotations.
         """
         self.position = np.array(position, dtype=np.float32)
@@ -48,7 +48,7 @@ class Obstacle:
         """
         coords = np.add(self.get_polygon_parallel_coords(), self.position)
         polygon_parallel = Polygon(coords)
-        return affinity.rotate(polygon_parallel, self.angle)
+        return affinity.rotate(polygon_parallel, self.angle, use_radians=True)
 
     def get_polygon_parallel_coords(self):
         """
@@ -94,7 +94,7 @@ class ServoStub(Obstacle):
         height: float
             Servo height, mm
         angle_range: Tuple[float]
-            Min and max rotation angles, degrees.
+            Min and max rotation angles, radians.
             Has no effect for `ServoStub`.
             Default is `None`.
         """
@@ -128,7 +128,7 @@ class Servo(ServoStub):
     Servo has only one function - rotate the sonar.
     """
 
-    def __init__(self, width, height, angle_range=(-90, 90), angular_vel=30):
+    def __init__(self, width, height, angle_range, angular_vel):
         """
         Parameters
         ----------
@@ -137,9 +137,9 @@ class Servo(ServoStub):
         height: float
             Servo height, mm
         angle_range: Tuple[float]
-            Min and max rotation angles, degrees
+            Min and max rotation angles, radians
         angular_vel: float or str
-            Rotation degrees per second.
+            Rotation radians per second.
         """
         super().__init__(width=width, height=height, angle_range=angle_range)
         self.angular_vel = angular_vel
@@ -252,7 +252,7 @@ class Robot(Obstacle):
         move_step: float
             Performed move step in mm along robot's main axis.
         angle_rotate: float
-            Performed rotation in degrees.
+            Performed rotation in radians.
         trajectory: LineString
             Trajectory of this step.
         """
@@ -277,27 +277,25 @@ class Robot(Obstacle):
 
             # compute instantaneous center of curvature
             x, y = self.position
-            angle_rad = math.radians(self.angle)
-            x_icc = x - r_icc * np.sin(angle_rad)
-            y_icc = y + r_icc * np.cos(angle_rad)
+            x_icc = x - r_icc * np.sin(self.angle)
+            y_icc = y + r_icc * np.cos(self.angle)
 
             # compute the angular velocity
             omega = (vel_right - vel_left) / self.width
 
             # compute the angle change
-            dtheta = omega * sim_time
+            angle_rotate = omega * sim_time
 
             # forward kinematics for differential drive
             pos_icc = np.array([x - x_icc, y - y_icc])  # robot position in ICC coordinate system
             rotate = lambda angle: rotation_matrix(angle).dot(pos_icc) + [x_icc, y_icc]
-            self.position = rotate(dtheta)
+            self.position = rotate(angle_rotate)
 
-            move_step = r_icc * dtheta  # arc length
-            angle_rotate = math.degrees(dtheta)
+            move_step = r_icc * angle_rotate  # arc length
             self.angle += angle_rotate
 
             # create curvature trajectory for rendering
-            dtheta_intermediate = np.linspace(0, dtheta, num=5, endpoint=True)
+            dtheta_intermediate = np.linspace(0, angle_rotate, num=5, endpoint=True)
             trajectory = LineString(map(rotate, dtheta_intermediate))
 
         # dilate line
@@ -309,7 +307,7 @@ class Robot(Obstacle):
         Parameters
         ----------
         angle_step: float
-            CCW angle turn in degrees.
+            CCW angle turn in radians.
         """
         self.angle += angle_step
 
@@ -340,8 +338,7 @@ class Robot(Obstacle):
         np.ndarray
             Robot's direction vector, (x, y)
         """
-        angle_rad = math.radians(self.angle)
-        return np.array([np.cos(angle_rad), np.sin(angle_rad)])
+        return np.array([np.cos(self.angle), np.sin(self.angle)])
 
     @property
     def servo_position(self):
@@ -374,7 +371,7 @@ class Robot(Obstacle):
         if self.collision(obstacles):
             return 0., self.position
         sensor_pos = self.servo_position
-        angle_target = math.radians(self.angle + self.servo.angle)
+        angle_target = self.angle + self.servo.angle
         target_direction = np.array([np.cos(angle_target), np.sin(angle_target)])
         ray_cast = LineString([sensor_pos, sensor_pos + target_direction * self.sensor_max_dist])
         min_dist = self.sensor_max_dist
@@ -405,7 +402,7 @@ class Robot(Obstacle):
         if box.shape != (2,):
             raise ValueError("Can sample a point from a plain 2D box only")
         self.position = box.sample()
-        self.angle = random.randint(0, 360)
+        self.angle = random.uniform(0, 2 * math.pi)
         self.servo.reset()
 
     def extra_repr(self):

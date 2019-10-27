@@ -1,3 +1,4 @@
+import math
 import unittest
 
 import numpy as np
@@ -27,7 +28,7 @@ class TestRobotMethods(unittest.TestCase):
         assert_array_almost_equal(self.robot.position, pos)
 
     def test_move_forward_angle(self):
-        self.robot.angle = 45
+        self.robot.angle = math.radians(45)
         pos = np.copy(self.robot.position)
         self.robot.move_forward(move_step=1)
         increment = 0.5 ** 0.5

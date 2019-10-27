@@ -56,7 +56,6 @@ class TestUltrasonicEnv(unittest.TestCase):
         angle_target = np.arctan2(vy, vx)
         if angle_target < 0:
             angle_target += 2 * math.pi
-        angle_target = math.degrees(angle_target)
         angle_turn = angle_target - self.env.robot.angle
         self.env.robot.turn(angle_turn)
         dist_to_obstacle = np.linalg.norm(vec_to_obstacle)
