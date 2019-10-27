@@ -1,0 +1,2 @@
+SERVO_ANGLE_MAX = 30  # degrees
+WHEEL_VELOCITY_MAX = 145  # mm/s

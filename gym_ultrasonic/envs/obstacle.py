@@ -208,6 +208,7 @@ class Robot(Obstacle):
         if servo is None:
             servo = ServoStub(width=0.3 * self.height, height=0.5 * self.width)
         self.servo = servo
+        self.wheel_dist = self.height + 12  # 12 mm - wheel width
 
     @property
     def servo_shift(self):
@@ -228,6 +229,77 @@ class Robot(Obstacle):
         """
         vec = np.multiply(self.direction_vector, move_step)
         self.position += vec
+
+    def diffdrive(self, vel_left, vel_right, sim_time):
+        """
+        Differential drive. Adapted from
+        http://ais.informatik.uni-freiburg.de/teaching/ss17/robotics/exercises/solutions/03/sheet03sol.pdf
+
+        Parameters
+        ----------
+        vel_left: float
+            Left wheel tangential speed, mm / sec.
+        vel_right: float
+            Right wheel tangential speed, mm / sec.
+        sim_time: float
+            Simulation time step, sec.
+
+        Returns
+        -------
+        move_step: float
+            Performed move step in mm along robot's main axis.
+        angle_rotate: float
+            Performed rotation in degrees.
+        trajectory: LineString
+            Trajectory of this step.
+        """
+
+        def rotation_matrix(theta):
+            c = np.cos(theta)
+            s = np.sin(theta)
+            return np.array([[c, -s],
+                             [s, c]])
+
+        old_pos = np.copy(self.position)
+
+        if vel_left == vel_right:
+            # straight line
+            move_step = vel_left * sim_time
+            angle_rotate = 0
+            self.move_forward(move_step)
+            trajectory = LineString([old_pos, self.position])
+        else:  # circular motion
+            # Calculate the radius of rotation
+            r_icc = self.wheel_dist / 2.0 * ((vel_left + vel_right) / (vel_right - vel_left))
+
+            # compute instantaneous center of curvature
+            x, y = self.position
+            angle_rad = math.radians(self.angle)
+            x_icc = x - r_icc * np.sin(angle_rad)
+            y_icc = y + r_icc * np.cos(angle_rad)
+
+            # compute the angular velocity
+            omega = (vel_right - vel_left) / self.wheel_dist
+
+            # compute the angle change
+            dtheta = omega * sim_time
+
+            # forward kinematics for differential drive
+            pos_icc = np.array([x - x_icc, y - y_icc])  # robot position in ICC coordinate system
+            rotate = lambda angle: rotation_matrix(angle).dot(pos_icc) + [x_icc, y_icc]
+            self.position = rotate(dtheta)
+
+            move_step = r_icc * dtheta  # arc length
+            angle_rotate = math.degrees(dtheta)
+            self.angle += angle_rotate
+
+            # create curvature trajectory
+            dtheta_intermediate = np.linspace(0, dtheta, num=5, endpoint=True)
+            trajectory = LineString(map(rotate, dtheta_intermediate))
+
+        # dilate line
+        trajectory = trajectory.buffer(distance=self.height / 2., cap_style=3, resolution=2)
+        return move_step, angle_rotate, trajectory
 
     def turn(self, angle_step):
         """

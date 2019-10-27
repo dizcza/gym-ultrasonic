@@ -6,10 +6,15 @@ import gym
 import numpy as np
 from numpy.testing import assert_array_almost_equal
 
-import gym_ultrasonic
+from gym_ultrasonic.envs.obstacle import Obstacle
 
 
 class TestUltrasonicEnv(unittest.TestCase):
+
+    @classmethod
+    def setUpClass(cls) -> None:
+        random.seed(27)
+        np.random.seed(27)
 
     def setUp(self):
         self.env = gym.make('UltrasonicServo-v0')
@@ -79,7 +84,26 @@ class TestUltrasonicEnv(unittest.TestCase):
         self.env.render()
 
 
+class TestTrajectory(unittest.TestCase):
+
+    def setUp(self):
+        self.env = gym.make('UltrasonicServo-v0', time_step=1)
+        self.env.robot.speed = 1
+        self.env.reset()
+        self.env.robot.position = np.divide([self.env.width, self.env.height], 2.)
+        self.env.robot.angle = 0
+        self.env.env.obstacles = [
+            Obstacle(self.env.robot.position + [100, -10], width=5, height=5),
+            Obstacle(self.env.robot.position + [100, -10], width=5, height=5)
+        ]
+
+    def test_trajectory_collision(self):
+        action = (130, 130)  # wheels velocity
+        observation, reward, done, info = self.env.step(action)
+        robot_collision = self.env.robot.collision(self.env.obstacles)
+        self.assertFalse(robot_collision)
+        self.assertTrue(done)  # trajectory, not curr pos, collision with obstacles
+
+
 if __name__ == '__main__':
-    random.seed(27)
-    np.random.seed(27)
     unittest.main()

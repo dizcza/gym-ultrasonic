@@ -6,13 +6,15 @@ import gym
 import numpy as np
 from gym import spaces
 from gym.envs.classic_control import rendering
+from shapely.geometry import LineString
 
 from .obstacle import Robot, Obstacle, Servo
+from .constants import WHEEL_VELOCITY_MAX, SERVO_ANGLE_MAX
 
 
 class UltrasonicEnv(gym.Env):
     """
-    A robot with one Ultrasonic sonar sensor, trying to avoid obstacles. Never stops (no target).
+    A differential robot with one Ultrasonic sonar sensor, trying to avoid obstacles. Never stops (no target).
     """
     
     metadata = {'render.modes': ['human', 'rgb_array']}
@@ -20,10 +22,11 @@ class UltrasonicEnv(gym.Env):
     # dist to obstacles
     observation_space = spaces.Box(low=0., high=2000., shape=(1,))
 
-    # vector move along main axis (mm), angle turn (degrees)
-    action_space = spaces.Box(low=-12, high=12, shape=(2,))
+    # wheels velocity, mm/s
+    # action space box is slightly larger because of the additive noise
+    action_space = spaces.Box(low=-WHEEL_VELOCITY_MAX, high=WHEEL_VELOCITY_MAX, shape=(2,))
 
-    def __init__(self, n_obstacles=4):
+    def __init__(self, n_obstacles=4, time_step=0.1):
         """
         Parameters
         ----------
@@ -31,6 +34,7 @@ class UltrasonicEnv(gym.Env):
             Num. of obstacles on the scene.
         """
         super().__init__()
+        self.time_step = time_step
         self.scale_down = 5
         self.width = self.height = 3000 // self.scale_down
 
@@ -67,6 +71,7 @@ class UltrasonicEnv(gym.Env):
         self.ray_collision_transform = rendering.Transform()
         self.robot_transform = rendering.Transform()
         self.servo_transform = rendering.Transform()
+        self._current_trajectory = None
 
         self.reset()
 
@@ -93,13 +98,12 @@ class UltrasonicEnv(gym.Env):
         info: dict
             An empty dict. Unused.
         """
-        move_step = action[0]
-        robot_turn = action[1]
+        vel_left, vel_right = action[:2]
         servo_turn = action[2] if len(action) == 3 else None
-        self.robot.move_forward(move_step)
-        self.robot.turn(robot_turn)
+        move_step, robot_turn, trajectory = self.robot.diffdrive(vel_left, vel_right, sim_time=self.time_step)
+        self._current_trajectory = trajectory
         self.robot.servo.rotate(servo_turn)
-        reward, done = self.reward(move_step, robot_turn, servo_turn)
+        reward, done = self.reward(trajectory, move_step, robot_turn, servo_turn)
         self.state = self.update_state()
         info = {}
         return self.state, reward, done, info
@@ -114,12 +118,14 @@ class UltrasonicEnv(gym.Env):
         min_dist, _ = self.robot.ray_cast(self.obstacles)
         return [min_dist]
 
-    def reward(self, move_step, angle_turn, servo_turn):
+    def reward(self, trajectory, move_step, angle_turn, servo_turn):
         """
         Computes the reward.
 
         Parameters
         ----------
+        trajectory: LineString
+            Trajectory of this step.
         move_step: float
             Move robot with `move_step` mm along its main axis.
         angle_turn: float
@@ -136,6 +142,9 @@ class UltrasonicEnv(gym.Env):
         """
         if self.robot.collision(self.obstacles):
             return -1000, True
+        for obstacle in self.obstacles:
+            if obstacle.polygon.intersects(trajectory):
+                return -1000, True
         reward = -2 + move_step - abs(angle_turn)
         if servo_turn is not None:
             reward -= abs(servo_turn)
@@ -206,6 +215,11 @@ class UltrasonicEnv(gym.Env):
         if self.viewer is None:
             self.init_view()
 
+        if self._current_trajectory is not None:
+            trajectory_view = rendering.FilledPolygon(self._current_trajectory.boundary.coords)
+            trajectory_view._color.vec4 = (0, 0, 0.9, 0.2)
+            self.viewer.add_onetime(trajectory_view)
+
         _, intersection_xy = self.robot.ray_cast(self.obstacles)
         self.ray_collision_transform.set_translation(*intersection_xy)
 
@@ -231,10 +245,10 @@ class UltrasonicServoEnv(UltrasonicEnv):
     metadata = {'render.modes': ['human', 'rgb_array']}
 
     # dist to obstacles, servo_angle
-    observation_space = spaces.Box(low=np.array([UltrasonicEnv.observation_space.low[0], -30]),
-                                   high=np.array([UltrasonicEnv.observation_space.high[0], 30]))
+    observation_space = spaces.Box(low=np.array([UltrasonicEnv.observation_space.low[0], -SERVO_ANGLE_MAX]),
+                                   high=np.array([UltrasonicEnv.observation_space.high[0], SERVO_ANGLE_MAX]))
 
-    def __init__(self, n_obstacles=4, servo_angular_vel=120):
+    def __init__(self, n_obstacles=4, time_step=0.1, servo_angular_vel=120):
         """
         Parameters
         ----------
@@ -243,7 +257,7 @@ class UltrasonicServoEnv(UltrasonicEnv):
         servo_angular_vel: float or str
             Servo angular velocity, degrees per sec.
         """
-        super().__init__(n_obstacles=n_obstacles)
+        super().__init__(n_obstacles=n_obstacles, time_step=time_step)
         if servo_angular_vel == 'learn':
             # vector move along main axis (mm), angle turn (degrees), servo turn (degrees)
             self.action_space = spaces.Box(low=-12, high=12, shape=(3,))

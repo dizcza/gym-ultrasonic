@@ -25,6 +25,7 @@ class NormalizeNonNegative(Processor):
     def process_observation(self, observation):
         """
         Converts observations to `[0, 1]` range, suitable for spiking neural networks (not used here).
+        Processes the observation as obtained from the environment for use in an agent and returns it.
 
         Parameters
         ----------
@@ -47,13 +48,13 @@ class NormalizeNonNegative(Processor):
             observation_norm.append(angle_norm)
         return observation_norm
 
-    def process_action(self, action_sigm):
+    def process_action(self, action_tanh):
         """
         Parameters
         ----------
-        action_sigm: np.ndarray
-            Actor network prediction from sigmoid activation function.
-            All values are in range `[0, 1]`.
+        action_tanh: np.ndarray
+            Actor network prediction (last activation layer).
+            All values are in range `[-1, 1]`.
             `action_sigm[0]`: robot move step;
             `action_sigm[1]`: robot turn angle;
             `action_sigm[2]`: servo turn angle (`UltrasonicServoEnv-v1`).
@@ -63,6 +64,5 @@ class NormalizeNonNegative(Processor):
         action_tanh: np.ndarray
             Scaled action in range `[-action_scale, action_scale]`.
         """
-        action_tanh = (action_sigm - 0.5) * 2
-        action_tanh *= self.action_scale
+        action_tanh = action_tanh * self.action_scale
         return action_tanh
