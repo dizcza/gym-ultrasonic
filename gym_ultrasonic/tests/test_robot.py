@@ -10,7 +10,7 @@ from gym_ultrasonic.envs.obstacle import Robot, Obstacle
 class TestRobotMethods(unittest.TestCase):
 
     def setUp(self):
-        self.robot = Robot(50, 30)
+        self.robot = Robot(30, 50)
         self.robot.set_position([300, 300])
 
     def test_turn(self):
@@ -45,7 +45,7 @@ class TestRobotMethods(unittest.TestCase):
         self.assertTrue(self.robot.collision(obstacle))
 
     def test_collision_on_line_slim(self):
-        obstacle = Obstacle([400, 300], 150, 100)
+        obstacle = Obstacle([400, 300], 100, 150)
         self.assertTrue(self.robot.collision(obstacle))
 
     def test_collision_rotation(self):
@@ -55,7 +55,7 @@ class TestRobotMethods(unittest.TestCase):
 
     def test__edge_collision_rotation(self):
         self.robot.angle = 45
-        obstacle = Obstacle([350, 350], 100, 50)
+        obstacle = Obstacle([350, 350], 50, 100)
         self.assertTrue(self.robot.collision(obstacle))
 
     def test_no_collision(self):

@@ -39,7 +39,7 @@ class UltrasonicEnv(gym.Env):
         self.width = self.height = 3000 // self.scale_down
 
         # robot's position will be reset later on
-        self.robot = Robot(width=120 / self.scale_down, height=90 / self.scale_down,
+        self.robot = Robot(width=115 / self.scale_down, height=140 / self.scale_down,
                            sensor_max_dist=self.observation_space.high[0])
 
         wall_size = 10
@@ -47,14 +47,14 @@ class UltrasonicEnv(gym.Env):
         self.allowed_space = spaces.Box(low=indent, high=self.width - indent, shape=(2,))
 
         walls = [
-            Obstacle([0, self.height / 2], wall_size, self.height),  # left wall
-            Obstacle([self.width, self.height / 2], wall_size, self.height),  # right wall
-            Obstacle([self.width / 2, self.height], self.width, wall_size),  # top wall
-            Obstacle([self.width / 2, 0], self.width, wall_size)  # bottom wall
+            Obstacle([0, self.height / 2], self.height, wall_size),  # left wall
+            Obstacle([self.width, self.height / 2], self.height, wall_size),  # right wall
+            Obstacle([self.width / 2, self.height], wall_size, self.width),  # top wall
+            Obstacle([self.width / 2, 0], wall_size, self.width)  # bottom wall
         ]
         self.obstacles = []
 
-        sample_obstacle_size = lambda: random.randint(self.robot.height // 2, self.robot.width * 3)
+        sample_obstacle_size = lambda: random.randint(int(0.75 * self.robot.width), self.robot.width * 5)
 
         for random_obstacle_id in range(n_obstacles):
             obst = Obstacle(position=random.sample(range(self.width), k=2),

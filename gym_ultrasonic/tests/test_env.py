@@ -60,14 +60,16 @@ class TestUltrasonicEnv(unittest.TestCase):
         angle_turn = angle_target - self.env.robot.angle
         self.env.robot.turn(angle_turn)
         dist_to_obstacle = np.linalg.norm(vec_to_obstacle)
-        observation, reward, done, _ = self.env.step(action=(dist_to_obstacle, 0))
+        wheel_velocity = dist_to_obstacle / self.env.time_step
+        observation, reward, done, _ = self.env.step(action=(wheel_velocity, wheel_velocity))
         self.assertAlmostEqual(observation[0], 0, places=4)
         self.assertTrue(reward < 0)
         self.assertTrue(done)
 
     def test_step_collide_towards(self):
         dist_to_obstacle, _ = self.env.robot.ray_cast(self.env.obstacles)
-        observation, reward, done, _ = self.env.step(action=(dist_to_obstacle, 0))
+        wheel_velocity = dist_to_obstacle / self.env.time_step
+        observation, reward, done, _ = self.env.step(action=(wheel_velocity, wheel_velocity))
         self.assertAlmostEqual(observation[0], 0, places=4)
         self.assertTrue(reward < 0)
         self.assertTrue(done)

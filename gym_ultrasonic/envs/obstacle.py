@@ -55,9 +55,11 @@ class Obstacle:
         Returns
         -------
         list
-            Clock-wise vertices of a bounding box polygon, parallel to the world axes.
+            Clock-wise vertices of the bounding box polygon, parallel to the world axes.
         """
-        l, r, t, b = -self.width / 2, self.width / 2, self.height / 2, -self.height / 2
+        # zero angle is aligned with Ox axis
+        # that's why width is substituted by height
+        l, r, t, b = -self.height / 2, self.height / 2, self.width / 2, -self.width / 2
         return [(l, b), (l, t), (r, t), (r, b)]
 
     def set_position(self, position):
@@ -206,9 +208,10 @@ class Robot(Obstacle):
         super().__init__(position=[0., 0.], width=width, height=height, angle=0)
         self.sensor_max_dist = sensor_max_dist
         if servo is None:
-            servo = ServoStub(width=0.3 * self.height, height=0.5 * self.width)
+            # servo is 90 degrees rotated w.r.t. robot
+            # that's why width is substituted by height
+            servo = ServoStub(width=0.5 * self.height, height=0.25 * self.width)
         self.servo = servo
-        self.wheel_dist = self.height + 12  # 12 mm - wheel width
 
     @property
     def servo_shift(self):
@@ -218,7 +221,7 @@ class Robot(Obstacle):
         float
             Shift of the servo along robot's main axis, mm
         """
-        return 0.3 * self.width
+        return 0.3 * self.height
 
     def move_forward(self, move_step):
         """
@@ -270,7 +273,7 @@ class Robot(Obstacle):
             trajectory = LineString([old_pos, self.position])
         else:  # circular motion
             # Calculate the radius of rotation
-            r_icc = self.wheel_dist / 2.0 * ((vel_left + vel_right) / (vel_right - vel_left))
+            r_icc = self.width / 2.0 * ((vel_left + vel_right) / (vel_right - vel_left))
 
             # compute instantaneous center of curvature
             x, y = self.position
@@ -279,7 +282,7 @@ class Robot(Obstacle):
             y_icc = y + r_icc * np.cos(angle_rad)
 
             # compute the angular velocity
-            omega = (vel_right - vel_left) / self.wheel_dist
+            omega = (vel_right - vel_left) / self.width
 
             # compute the angle change
             dtheta = omega * sim_time
@@ -293,12 +296,12 @@ class Robot(Obstacle):
             angle_rotate = math.degrees(dtheta)
             self.angle += angle_rotate
 
-            # create curvature trajectory
+            # create curvature trajectory for rendering
             dtheta_intermediate = np.linspace(0, dtheta, num=5, endpoint=True)
             trajectory = LineString(map(rotate, dtheta_intermediate))
 
         # dilate line
-        trajectory = trajectory.buffer(distance=self.height / 2., cap_style=3, resolution=2)
+        trajectory = trajectory.buffer(distance=self.width / 2., cap_style=3, resolution=2)
         return move_step, angle_rotate, trajectory
 
     def turn(self, angle_step):
