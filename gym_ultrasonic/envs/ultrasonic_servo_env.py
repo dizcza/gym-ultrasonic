@@ -9,18 +9,19 @@ from gym.envs.classic_control import rendering
 from shapely.geometry import LineString
 
 from .obstacle import Robot, Obstacle, Servo
-from .constants import WHEEL_VELOCITY_MAX, SERVO_ANGLE_MAX, SENSOR_DIST_MAX, ROBOT_HEIGHT, ROBOT_WIDTH
+from .constants import WHEEL_VELOCITY_MAX, SERVO_ANGLE_MAX, SENSOR_DIST_MAX, ROBOT_HEIGHT, ROBOT_WIDTH, \
+    SCREEN_SCALE_DOWN, SCREEN_SIZE, OBSERVATIONS_MEMORY_SIZE
 
 
 class UltrasonicEnv(gym.Env):
     """
     A differential robot with one Ultrasonic sonar sensor, trying to avoid obstacles. Never stops (no target).
     """
-    
+
     metadata = {'render.modes': ['human', 'rgb_array']}
 
     # dist to obstacles
-    observation_space = spaces.Box(low=0., high=SENSOR_DIST_MAX, shape=(1,))
+    observation_space = spaces.Box(low=0., high=SENSOR_DIST_MAX, shape=(OBSERVATIONS_MEMORY_SIZE,))
 
     # wheels velocity, mm/s
     # action space box is slightly larger because of the additive noise
@@ -35,11 +36,10 @@ class UltrasonicEnv(gym.Env):
         """
         super().__init__()
         self.time_step = time_step
-        self.scale_down = 5
-        self.width = self.height = 3000 // self.scale_down
+        self.width = self.height = SCREEN_SIZE // SCREEN_SCALE_DOWN
 
         # robot's position will be reset later on
-        self.robot = Robot(width=ROBOT_WIDTH / self.scale_down, height=ROBOT_HEIGHT / self.scale_down)
+        self.robot = Robot(width=ROBOT_WIDTH / SCREEN_SCALE_DOWN, height=ROBOT_HEIGHT / SCREEN_SCALE_DOWN)
 
         wall_size = 10
         indent = wall_size + max(self.robot.width, self.robot.height)
@@ -115,7 +115,8 @@ class UltrasonicEnv(gym.Env):
             Min dist to obstacles.
         """
         min_dist, _ = self.robot.ray_cast(self.obstacles)
-        return [min_dist]
+        new_state = self.state[1:] + [min_dist]
+        return new_state
 
     def reward(self, trajectory, move_step, angle_rotate, servo_turn):
         """
@@ -160,7 +161,8 @@ class UltrasonicEnv(gym.Env):
             It's not clear what the default "min dist to obstacles" is - 0, `sensor_max_dist` or a value in-between.
             But since we `update_state()` after each `reset()`, it should not matter.
         """
-        return [0.]
+        state_size = np.prod(self.observation_space.shape)
+        return np.zeros(state_size, dtype=float).tolist()
 
     def reset(self):
         """
@@ -241,12 +243,12 @@ class UltrasonicServoEnv(UltrasonicEnv):
     A robot with one Ultrasonic sonar sensor and a servo that rotates the sonar.
     The task is the same: avoid obstacles. Never stops (no target).
     """
-    
+
     metadata = {'render.modes': ['human', 'rgb_array']}
 
     # dist to obstacles, servo_angle
-    observation_space = spaces.Box(low=np.array([UltrasonicEnv.observation_space.low[0], -SERVO_ANGLE_MAX]),
-                                   high=np.array([UltrasonicEnv.observation_space.high[0], SERVO_ANGLE_MAX]))
+    observation_space = spaces.Box(low=np.tile([0, -SERVO_ANGLE_MAX], reps=OBSERVATIONS_MEMORY_SIZE),
+                                   high=np.tile([SENSOR_DIST_MAX, SERVO_ANGLE_MAX], reps=OBSERVATIONS_MEMORY_SIZE))
 
     def __init__(self, n_obstacles=4, time_step=0.1, servo_angular_vel=2.0):
         """
@@ -267,18 +269,6 @@ class UltrasonicServoEnv(UltrasonicEnv):
                                  angle_range=(-SERVO_ANGLE_MAX, SERVO_ANGLE_MAX),
                                  angular_vel=servo_angular_vel)
 
-    @property
-    def init_state(self):
-        """
-        Returns
-        -------
-        List[float]
-            Initial env state (observation).
-            It's not clear what the default "min dist to obstacles" is - 0, `sensor_max_dist` or a value in-between.
-            But since we `update_state()` after each `reset()`, it should not matter.
-        """
-        return [0., 0.]
-
     def update_state(self):
         """
         Returns
@@ -286,6 +276,6 @@ class UltrasonicServoEnv(UltrasonicEnv):
         state: List[float]
             Min dist to obstacles and servo rotation angle.
         """
-        state = super().update_state()
-        state.append(self.robot.servo.angle)
-        return state
+        min_dist, _ = self.robot.ray_cast(self.obstacles)
+        new_state = self.state[2:] + [min_dist, self.robot.servo.angle]
+        return new_state

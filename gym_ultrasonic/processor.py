@@ -3,7 +3,7 @@ from typing import List
 import numpy as np
 from rl.core import Processor
 
-from gym_ultrasonic.envs.constants import SERVO_ANGLE_MAX, SENSOR_DIST_MAX, WHEEL_VELOCITY_MAX
+from gym_ultrasonic.envs.constants import SERVO_ANGLE_MAX, SENSOR_DIST_MAX, WHEEL_VELOCITY_MAX, OBSERVATIONS_MEMORY_SIZE
 
 
 class UnitsProcessor(Processor):
@@ -25,12 +25,13 @@ class UnitsProcessor(Processor):
         observation_norm: List[float]
             Normalized `observation` in range `[0, 1]`.
         """
-        dist_norm = observation[0] / SENSOR_DIST_MAX
-        observation_norm = [dist_norm]
-        if len(observation) > 1:
-            servo_angle_norm = (observation[1] + SERVO_ANGLE_MAX) / (2 * SERVO_ANGLE_MAX)
-            observation_norm.append(servo_angle_norm)
-        return observation_norm
+        observation = np.reshape(observation, (OBSERVATIONS_MEMORY_SIZE, -1))
+        # first dimension is distance
+        observation_norm = observation[:, 0] / SENSOR_DIST_MAX
+        if observation.shape[1] > 1:
+            servo_angle_norm = (observation[:, 1] + SERVO_ANGLE_MAX) / (2 * SERVO_ANGLE_MAX)
+            observation_norm = np.r_[observation_norm, servo_angle_norm]
+        return observation_norm.tolist()
 
     def process_action(self, action_tanh):
         """
