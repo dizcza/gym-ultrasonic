@@ -36,10 +36,10 @@ class UltrasonicEnv(gym.Env):
         """
         super().__init__()
         self.time_step = time_step
-        self.width = self.height = SCREEN_SIZE // SCREEN_SCALE_DOWN
+        self.width = self.height = SCREEN_SIZE
 
         # robot's position will be reset later on
-        self.robot = Robot(width=ROBOT_WIDTH / SCREEN_SCALE_DOWN, height=ROBOT_HEIGHT / SCREEN_SCALE_DOWN)
+        self.robot = Robot(width=ROBOT_WIDTH, height=ROBOT_HEIGHT)
 
         wall_size = 10
         indent = wall_size + max(self.robot.width, self.robot.height)
@@ -179,8 +179,8 @@ class UltrasonicEnv(gym.Env):
         """
         Initializes the Viewer (for displaying purpose only).
         """
-        self.viewer = rendering.Viewer(self.width, self.height)
-        robot_view = rendering.FilledPolygon(self.robot.get_polygon_parallel_coords())
+        self.viewer = rendering.Viewer(self.width // SCREEN_SCALE_DOWN, self.height // SCREEN_SCALE_DOWN)
+        robot_view = rendering.FilledPolygon(self.robot.get_polygon_parallel_coords() / SCREEN_SCALE_DOWN)
         robot_view.add_attr(self.robot_transform)
         robot_view.set_color(r=0., g=0., b=0.9)
 
@@ -190,14 +190,14 @@ class UltrasonicEnv(gym.Env):
         circle_collision.set_color(1, 0, 0)
         self.viewer.add_geom(circle_collision)
 
-        servo_view = rendering.FilledPolygon(self.robot.servo.get_polygon_parallel_coords())
+        servo_view = rendering.FilledPolygon(self.robot.servo.get_polygon_parallel_coords() / SCREEN_SCALE_DOWN)
         servo_view.add_attr(self.servo_transform)
-        servo_view.add_attr(rendering.Transform(translation=(self.robot.servo_shift, 0)))
+        servo_view.add_attr(rendering.Transform(translation=(self.robot.servo_shift / SCREEN_SCALE_DOWN, 0)))
         servo_view.add_attr(self.robot_transform)
         servo_view.set_color(1, 0, 0)
 
         for obstacle in self.obstacles:
-            polygon_coords = list(obstacle.polygon.boundary.coords)
+            polygon_coords = np.array(obstacle.polygon.boundary.coords, dtype=np.float32) / SCREEN_SCALE_DOWN
             polygon = rendering.FilledPolygon(polygon_coords)
             self.viewer.add_geom(polygon)
 
@@ -218,14 +218,17 @@ class UltrasonicEnv(gym.Env):
             self.init_view()
 
         if self._current_trajectory is not None:
-            trajectory_view = rendering.FilledPolygon(self._current_trajectory.boundary.coords)
+            trajectory_coords = np.array(self._current_trajectory.boundary.coords, dtype=np.float32) / SCREEN_SCALE_DOWN
+            trajectory_view = rendering.FilledPolygon(trajectory_coords)
             trajectory_view._color.vec4 = (0, 0, 0.9, 0.2)
             self.viewer.add_onetime(trajectory_view)
 
         _, intersection_xy = self.robot.ray_cast(self.obstacles)
+        intersection_xy = intersection_xy / SCREEN_SCALE_DOWN
         self.ray_collision_transform.set_translation(*intersection_xy)
 
-        self.robot_transform.set_translation(*self.robot.position)
+        x_robot, y_robot = self.robot.position / SCREEN_SCALE_DOWN
+        self.robot_transform.set_translation(x_robot, y_robot)
         self.robot_transform.set_rotation(self.robot.angle)
         self.servo_transform.set_rotation(self.robot.servo.angle)
         with_rgb = mode == 'rgb_array'

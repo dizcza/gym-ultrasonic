@@ -48,7 +48,7 @@ class Obstacle:
         Polygon
             Minimum rotated bounding box polygon.
         """
-        coords = np.add(self.get_polygon_parallel_coords(), self.position)
+        coords = self.get_polygon_parallel_coords() + self.position
         polygon_parallel = Polygon(coords)
         return affinity.rotate(polygon_parallel, self.angle, use_radians=True)
 
@@ -56,13 +56,13 @@ class Obstacle:
         """
         Returns
         -------
-        list
+        np.ndarray
             Clock-wise vertices of the bounding box polygon, parallel to the world axes.
         """
         # zero angle is aligned with Ox axis
         # that's why width is substituted by height
         l, r, t, b = -self.height / 2, self.height / 2, self.width / 2, -self.width / 2
-        return [(l, b), (l, t), (r, t), (r, b)]
+        return np.array([(l, b), (l, t), (r, t), (r, b)], dtype=np.float32)
 
     def set_position(self, position):
         """
@@ -367,7 +367,7 @@ class Robot(Obstacle):
         min_dist: float
             Min dist to an obstacle.
             If no obstacle is found at the ray intersection, `max_dist` is returned.
-        intersection_xy: list or np.ndarray
+        intersection_xy: np.ndarray
             X and Y of the intersection point with an obstacle.
         """
         if self.collision(obstacles):
@@ -376,8 +376,10 @@ class Robot(Obstacle):
         angle_target = self.angle + self.servo.angle
         target_direction = np.array([np.cos(angle_target), np.sin(angle_target)])
         ray_cast = LineString([sensor_pos, sensor_pos + target_direction * self.sensor_max_dist])
+
         min_dist = self.sensor_max_dist
-        intersection_xy = [-self.sensor_max_dist, -self.sensor_max_dist]  # hide from a drawing screen
+        # hide the intersection circle from a drawing screen
+        intersection_xy = np.array([-self.sensor_max_dist, -self.sensor_max_dist])
 
         for obj in obstacles:
             obj_pol = obj.polygon
