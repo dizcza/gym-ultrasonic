@@ -9,8 +9,9 @@ from gym.envs.classic_control import rendering
 from shapely.geometry import LineString, MultiLineString
 
 from .constants import WHEEL_VELOCITY_MAX, SERVO_ANGLE_MAX, SENSOR_DIST_MAX, ROBOT_HEIGHT, ROBOT_WIDTH, \
-    SCREEN_SCALE_DOWN, SCREEN_SIZE, OBSERVATIONS_MEMORY_SIZE, SERVO_ANGULAR_VELOCITY, SIMULATION_TIME_STEP
-from .obstacle import Robot, Obstacle, Servo
+    SCREEN_SCALE_DOWN, SCREEN_SIZE, SERVO_ANGULAR_VELOCITY, SIMULATION_TIME_STEP, \
+    N_OBSTACLES
+from .obstacle import Robot, Obstacle
 
 
 class UltrasonicEnv(gym.Env):
@@ -20,32 +21,34 @@ class UltrasonicEnv(gym.Env):
 
     metadata = {'render.modes': ['human', 'rgb_array']}
 
-    # dist to obstacles
-    observation_space = spaces.Box(low=0., high=SENSOR_DIST_MAX, shape=(OBSERVATIONS_MEMORY_SIZE,))
-
-    # wheels velocity, mm/s
     # action space box is slightly larger because of the additive noise
     action_space = spaces.Box(low=-WHEEL_VELOCITY_MAX, high=WHEEL_VELOCITY_MAX, shape=(2,))
 
-    def __init__(self, n_obstacles=4, time_step=SIMULATION_TIME_STEP):
+    def __init__(self, n_obstacles=N_OBSTACLES, time_step=SIMULATION_TIME_STEP,
+                 sonar_direction_angles=(0,)):
         """
         Parameters
         ----------
         n_obstacles: int
             Num. of obstacles on the scene.
         time_step: float
-            Simulation time step, used in :func:`Robot.diffdrive` and :func:`Servo.rotate`
+            Simulation time step, used in :func:`Robot.diffdrive` and :func:`Servo.rotate`.
+        sonar_direction_angles: Tuple[float]
+            List of sonar direction angles.
         """
         super().__init__()
         self.time_step = time_step
         self.width = self.height = SCREEN_SIZE
 
         # robot's position will be reset later on
-        self.robot = Robot(width=ROBOT_WIDTH, height=ROBOT_HEIGHT)
+        self.robot = Robot(width=ROBOT_WIDTH, height=ROBOT_HEIGHT, sonar_direction_angles=sonar_direction_angles)
+
+        # dist to obstacles
+        self.observation_space = spaces.Box(low=0., high=SENSOR_DIST_MAX, shape=(self.robot.n_sonars,))
 
         wall_size = 10
         indent = wall_size + max(self.robot.width, self.robot.height)
-        self.allowed_space = spaces.Box(low=indent, high=self.width - indent, shape=(2,))
+        self.allowed_screen_space = spaces.Box(low=indent, high=self.width - indent, shape=(2,))
 
         walls = [
             Obstacle([0, self.height / 2], self.height, wall_size),  # left wall
@@ -69,7 +72,7 @@ class UltrasonicEnv(gym.Env):
 
         # rendering
         self.viewer = None
-        self.ray_collision_transform = rendering.Transform()
+        self.ray_collision_transforms = [rendering.Transform() for sonar_id in range(self.robot.n_sonars)]
         self.robot_transform = rendering.Transform()
         self.servo_transform = rendering.Transform()
         self._current_trajectory = None
@@ -116,9 +119,8 @@ class UltrasonicEnv(gym.Env):
         state: List[float]
             Min dist to obstacles.
         """
-        min_dist, _ = self.robot.ray_cast(self.obstacles)
-        new_state = self.state[1:] + [min_dist]
-        return new_state
+        min_dist_array, _ = self.robot.ray_cast(self.obstacles)
+        return min_dist_array
 
     def reward(self, trajectory, move_step, angle_rotate, servo_turn):
         """
@@ -147,8 +149,8 @@ class UltrasonicEnv(gym.Env):
         for obstacle in self.obstacles:
             if obstacle.polygon.intersects(trajectory):
                 return -1000, True
-        reward = -1 + move_step / WHEEL_VELOCITY_MAX - 3 * abs(angle_rotate)
-        # print(abs(angle_turn))
+        reward = -1 + move_step - 3 * abs(angle_rotate)
+        # print(move_step, angle_rotate, reward)
         if servo_turn is not None:
             reward -= abs(servo_turn)
         return reward, False
@@ -171,9 +173,9 @@ class UltrasonicEnv(gym.Env):
         Resets the state and spawns a new robot position.
         """
         self.state = self.init_state
-        self.robot.reset(box=self.allowed_space)
+        self.robot.reset(box=self.allowed_screen_space)
         while self.robot.collision(self.obstacles):
-            self.robot.reset(box=self.allowed_space)
+            self.robot.reset(box=self.allowed_screen_space)
         self.state = self.update_state()
         return self.state
 
@@ -187,10 +189,11 @@ class UltrasonicEnv(gym.Env):
         robot_view.set_color(r=0., g=0., b=0.9)
 
         # ultrasonic sensor collision circle
-        circle_collision = rendering.make_circle(radius=7)
-        circle_collision.add_attr(self.ray_collision_transform)
-        circle_collision.set_color(1, 0, 0)
-        self.viewer.add_geom(circle_collision)
+        for intersection_transform in self.ray_collision_transforms:
+            circle_collision = rendering.make_circle(radius=7)
+            circle_collision.add_attr(intersection_transform)
+            circle_collision.set_color(1, 0, 0)
+            self.viewer.add_geom(circle_collision)
 
         servo_view = rendering.FilledPolygon(self.robot.servo.get_polygon_parallel_coords() / SCREEN_SCALE_DOWN)
         servo_view.add_attr(self.servo_transform)
@@ -233,9 +236,10 @@ class UltrasonicEnv(gym.Env):
                 trajectory_view._color.vec4 = (0, 0, 0.9, 0.2)
                 self.viewer.add_onetime(trajectory_view)
 
-        _, intersection_xy = self.robot.ray_cast(self.obstacles)
-        intersection_xy = intersection_xy / SCREEN_SCALE_DOWN
-        self.ray_collision_transform.set_translation(*intersection_xy)
+        _, intersection_xy_array = self.robot.ray_cast(self.obstacles)
+        intersection_xy_array = np.divide(intersection_xy_array, SCREEN_SCALE_DOWN)
+        for intersection_xy, intersection_transform in zip(intersection_xy_array, self.ray_collision_transforms):
+            intersection_transform.set_translation(*intersection_xy)
 
         x_robot, y_robot = self.robot.position / SCREEN_SCALE_DOWN
         self.robot_transform.set_translation(x_robot, y_robot)
@@ -257,32 +261,34 @@ class UltrasonicServoEnv(UltrasonicEnv):
     The task is the same: avoid obstacles. Never stops (no target).
     """
 
-    metadata = {'render.modes': ['human', 'rgb_array']}
-
-    # dist to obstacles, servo_angle
-    observation_space = spaces.Box(low=np.tile([0, -SERVO_ANGLE_MAX], reps=OBSERVATIONS_MEMORY_SIZE),
-                                   high=np.tile([SENSOR_DIST_MAX, SERVO_ANGLE_MAX], reps=OBSERVATIONS_MEMORY_SIZE))
-
-    def __init__(self, n_obstacles=4, time_step=SIMULATION_TIME_STEP, servo_angular_vel=SERVO_ANGULAR_VELOCITY):
+    def __init__(self, n_obstacles=N_OBSTACLES, time_step=SIMULATION_TIME_STEP,
+                 sonar_direction_angles=(0,),
+                 servo_angular_vel=SERVO_ANGULAR_VELOCITY):
         """
         Parameters
         ----------
         n_obstacles: int
             Num. of obstacles on the scene.
         time_step: float
-            Simulation time step, used in :func:`Robot.diffdrive` and :func:`Servo.rotate`
+            Simulation time step, used in :func:`Robot.diffdrive` and :func:`Servo.rotate`.
+        sonar_direction_angles: Tuple[float]
+            List of sonar direction angles.
         servo_angular_vel: float or str
             Servo angular velocity, radians per sec.
         """
-        super().__init__(n_obstacles=n_obstacles, time_step=time_step)
+        super().__init__(n_obstacles=n_obstacles, time_step=time_step, sonar_direction_angles=sonar_direction_angles)
+
+        # dist to obstacles, servo_angle
+        self.observation_space = spaces.Box(
+            low=np.r_[self.observation_space.low, -SERVO_ANGLE_MAX],
+            high=np.r_[self.observation_space.high, SERVO_ANGLE_MAX]
+        )
+
         if servo_angular_vel == 'learn':
             # wheels left and right velocity (mm/s), servo turn (radians)
             upperbound = np.array([WHEEL_VELOCITY_MAX, WHEEL_VELOCITY_MAX, math.radians(20)])
             self.action_space = spaces.Box(low=-upperbound, high=upperbound)
-        _servo = self.robot.servo
-        self.robot.servo = Servo(_servo.width, _servo.height,
-                                 angle_range=(-SERVO_ANGLE_MAX, SERVO_ANGLE_MAX),
-                                 angular_vel=servo_angular_vel)
+        self.robot.servo.angular_vel = servo_angular_vel
 
     def update_state(self):
         """
@@ -291,6 +297,6 @@ class UltrasonicServoEnv(UltrasonicEnv):
         state: List[float]
             Min dist to obstacles and servo rotation angle.
         """
-        min_dist, _ = self.robot.ray_cast(self.obstacles)
-        new_state = self.state[2:] + [min_dist, self.robot.servo.angle]
+        min_dist_array, _ = self.robot.ray_cast(self.obstacles)
+        new_state = min_dist_array + [self.robot.servo.angle]
         return new_state

@@ -10,7 +10,7 @@ from shapely import affinity
 from shapely import speedups
 from shapely.geometry import Polygon, LineString
 
-from .constants import SENSOR_DIST_MAX
+from .constants import SENSOR_DIST_MAX, SERVO_ANGULAR_VELOCITY, SERVO_ANGLE_MAX
 
 if not speedups.enabled:
     warnings.warn("Install Cython to enable shapely speedups")
@@ -82,12 +82,14 @@ class Obstacle:
         return f"{self.width} x {self.height}"
 
 
-class ServoStub(Obstacle):
+class Servo(Obstacle):
     """
-    Servo stub that cannot rotate.
+    Servo that holds sonar(s) on board.
+    Servo has only one function - rotate the sonar(s).
     """
 
-    def __init__(self, width, height, angle_range=None):
+    def __init__(self, width, height, sonar_direction_angles=(0,), angle_range=(-SERVO_ANGLE_MAX, SERVO_ANGLE_MAX),
+                 angular_vel=0):
         """
         Parameters
         ----------
@@ -95,59 +97,22 @@ class ServoStub(Obstacle):
             Servo width, mm
         height: float
             Servo height, mm
-        angle_range: Tuple[float]
-            Min and max rotation angles, radians.
-            Has no effect for `ServoStub`.
-            Default is `None`.
-        """
-        super().__init__(position=[0, 0], width=width, height=height, angle=0)
-        self.angle_range = angle_range
-
-    def rotate(self, sim_time=None, angle_turn=None):
-        """
-        Does nothing.
-
-        Parameters
-        ----------
-        sim_time: float
-            Simulation time step, sec.
-        angle_turn: float
-            Angle to rotate the servo. Ignored.
-        """
-        pass
-
-    def reset(self):
-        """
-        Resets the servo.
-        """
-        pass
-
-    def extra_repr(self):
-        return f"angle_range={self.angle_range}"
-
-
-class Servo(ServoStub):
-    """
-    Servo that holds sonar on board.
-    Servo has only one function - rotate the sonar.
-    """
-
-    def __init__(self, width, height, angle_range, angular_vel):
-        """
-        Parameters
-        ----------
-        width: float
-            Servo width, mm
-        height: float
-            Servo height, mm
+        sonar_direction_angles: Tuple[float]
+            List of sonar directions angles, radians.
         angle_range: Tuple[float]
             Min and max rotation angles, radians
         angular_vel: float or str
             Rotation radians per second.
         """
-        super().__init__(width=width, height=height, angle_range=angle_range)
+        super().__init__(position=[0, 0], width=width, height=height, angle=0)
+        self.sonar_direction_angles = sonar_direction_angles
+        self.angle_range = angle_range
         self.angular_vel = angular_vel
         self.ccw = 1
+
+    @property
+    def sonar_angles_world(self):
+        return np.add(self.angle, self.sonar_direction_angles)
 
     def rotate(self, sim_time=None, angle_turn=None):
         """
@@ -165,6 +130,9 @@ class Servo(ServoStub):
             raise ValueError("Either sim_time or angle_turn must be specified.")
         if angle_turn is None:
             angle_turn = sim_time * self.angular_vel * self.ccw
+        if angle_turn == 0:
+            # do nothing
+            return
         angle = self.angle + angle_turn
         min_angle, max_angle = self.angle_range
         if angle > max_angle:
@@ -181,12 +149,11 @@ class Servo(ServoStub):
         """
         Resets the servo.
         """
-        self.tick = None
         self.ccw = 1
         self.angle = 0
 
     def extra_repr(self):
-        return f"{super().extra_repr()}, angular_vel={self.angular_vel}"
+        return f"angle_range={self.angle_range}, angular_vel={self.angular_vel}"
 
 
 class Robot(Obstacle):
@@ -194,7 +161,7 @@ class Robot(Obstacle):
     Robot with a mounted servo and ultrasonic range sensor.
     """
 
-    def __init__(self, width, height, sensor_max_dist=SENSOR_DIST_MAX, servo=None):
+    def __init__(self, width, height, sonar_direction_angles=(0,), sensor_max_dist=SENSOR_DIST_MAX):
         """
         Initializes the robot with the given parameters at `[0, 0]` position and `0` rotation angle.
 
@@ -210,11 +177,12 @@ class Robot(Obstacle):
         """
         super().__init__(position=[0., 0.], width=width, height=height, angle=0)
         self.sensor_max_dist = sensor_max_dist
-        if servo is None:
-            # servo is 90 degrees rotated w.r.t. robot
-            # that's why width is substituted by height
-            servo = ServoStub(width=0.5 * self.height, height=0.25 * self.width)
-        self.servo = servo
+
+        # servo is 90 degrees rotated w.r.t. robot
+        # that's why width is substituted by height
+        self.servo = Servo(width=0.5 * self.height, height=0.25 * self.width,
+                           sonar_direction_angles=sonar_direction_angles,
+                           angular_vel=0)
 
     @property
     def servo_shift(self):
@@ -225,6 +193,16 @@ class Robot(Obstacle):
             Shift of the servo along robot's main axis, mm
         """
         return 0.3 * self.height
+
+    @property
+    def n_sonars(self):
+        """
+        Returns
+        -------
+        int
+            Num. of sonars on board.
+        """
+        return len(self.servo.sonar_direction_angles)
 
     def move_forward(self, move_step):
         """
@@ -353,28 +331,9 @@ class Robot(Obstacle):
         """
         return self.position + self.direction_vector * self.servo_shift
 
-    def ray_cast(self, obstacles):
-        """
-        Casts a ray along servo sensor direction and checks if there an intersection with `obstacles`.
-        Simulates Ultrasonic range sonar, mounted on top of the servo, in a real robot.
-
-        Parameters
-        ----------
-        obstacles: List[Obstacle]
-            List of obstacles in the scene.
-
-        Returns
-        -------
-        min_dist: float
-            Min dist to an obstacle.
-            If no obstacle is found at the ray intersection, `max_dist` is returned.
-        intersection_xy: np.ndarray
-            X and Y of the intersection point with an obstacle.
-        """
-        if self.collision(obstacles):
-            return 0., self.position
+    def _ray_cast_single_sonar(self, obstacles, sonar_angle):
         sensor_pos = self.servo_position
-        angle_target = self.angle + self.servo.angle
+        angle_target = self.angle + sonar_angle
         target_direction = np.array([np.cos(angle_target), np.sin(angle_target)])
         ray_cast = LineString([sensor_pos, sensor_pos + target_direction * self.sensor_max_dist])
 
@@ -394,6 +353,36 @@ class Robot(Obstacle):
                     min_dist = dist
                     intersection_xy = intersection_coords[argmin]
         return min_dist, intersection_xy
+
+    def ray_cast(self, obstacles):
+        """
+        Casts a ray along servo sensor direction and checks if there an intersection with `obstacles`.
+        Simulates Ultrasonic range sonar, mounted on top of the servo, in a real robot.
+
+        Parameters
+        ----------
+        obstacles: List[Obstacle]
+            List of obstacles in the scene.
+
+        Returns
+        -------
+        min_dist: List[float]
+            Min dist to an obstacle.
+            If no obstacle is found at the ray intersection, `max_dist` is returned.
+        intersection_xy: List[np.ndarray]
+            X and Y of the intersection point with an obstacle.
+        """
+        if self.collision(obstacles):
+            min_dist_array = [0.] * self.n_sonars
+            intersection_xy_array = np.tile(self.position, reps=(self.n_sonars, 1)).tolist()
+        else:
+            min_dist_array = []
+            intersection_xy_array = []
+            for sonar_angle in self.servo.sonar_angles_world:
+                min_dist, intersection_xy = self._ray_cast_single_sonar(obstacles, sonar_angle=sonar_angle)
+                min_dist_array.append(min_dist)
+                intersection_xy_array.append(intersection_xy)
+        return min_dist_array, intersection_xy_array
 
     def reset(self, box):
         """

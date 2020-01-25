@@ -20,7 +20,7 @@ from gym_ultrasonic.envs.constants import WHEEL_VELOCITY_MAX
 random.seed(27)
 np.random.seed(27)
 
-ENV_NAME = 'UltrasonicServo-v0'
+ENV_NAME = 'Ultrasonic-v1'
 
 # Get the environment and extract the number of actions.
 env = gym.make(ENV_NAME)
@@ -62,7 +62,7 @@ def create_actor_critic_agent():
     agent = DDPGAgent(nb_actions=nb_actions, actor=create_actor(), critic=create_critic(),
                       critic_action_input=action_input, memory=memory, nb_steps_warmup_critic=100,
                       nb_steps_warmup_actor=100, random_process=random_process, gamma=.8, target_model_update=1e-3,
-                      processor=UnitsProcessor())
+                      processor=UnitsProcessor(n_sonars=env.robot.n_sonars))
     agent.compile(Adam(lr=.001), metrics=['mse'])
     return agent
 
@@ -74,7 +74,7 @@ WEIGHTS_PATH.parent.mkdir(exist_ok=True)
 
 agent = create_actor_critic_agent()
 # agent.load_weights(WEIGHTS_PATH)
-# agent.actor.save('weights/actor.h5')
+agent.actor.save('weights/actor.h5')
 
 expand_logger = ExpandLogger()
 dump_logger = DataDumpLogger(fpath=DATA_PATH)
@@ -89,5 +89,6 @@ agent.fit(env, nb_steps=50000, visualize=1, verbose=2, nb_max_episode_steps=1000
 agent.save_weights(WEIGHTS_PATH, overwrite=True)
 
 # test
+env = gym.wrappers.Monitor(env, directory="videos", force=True, video_callable=lambda episode_id: True)
 agent.test(env, nb_episodes=5, visualize=1, nb_max_episode_steps=5000, callbacks=[dump_logger])
 env.close()

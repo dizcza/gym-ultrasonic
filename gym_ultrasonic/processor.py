@@ -3,11 +3,14 @@ from typing import List
 import numpy as np
 from rl.core import Processor
 
-from gym_ultrasonic.envs.constants import SERVO_ANGLE_MAX, SENSOR_DIST_MAX, WHEEL_VELOCITY_MAX, OBSERVATIONS_MEMORY_SIZE
+from gym_ultrasonic.envs.constants import SERVO_ANGLE_MAX, SENSOR_DIST_MAX, WHEEL_VELOCITY_MAX
 
 
 class UnitsProcessor(Processor):
-    
+
+    def __init__(self, n_sonars):
+        self.n_sonars = n_sonars
+
     def process_observation(self, observation):
         """
         Converts observations to `[0, 1]` range, suitable for spiking neural networks (not used here).
@@ -25,12 +28,12 @@ class UnitsProcessor(Processor):
         observation_norm: List[float]
             Normalized `observation` in range `[0, 1]`.
         """
-        observation = np.reshape(observation, (OBSERVATIONS_MEMORY_SIZE, -1))
-        # first dimension is distance
-        observation_norm = observation[:, 0] / SENSOR_DIST_MAX
-        if observation.shape[1] > 1:
-            servo_angle_norm = (observation[:, 1] + SERVO_ANGLE_MAX) / (2 * SERVO_ANGLE_MAX)
+        distances = observation[:self.n_sonars]
+        observation_norm = np.divide(distances, SENSOR_DIST_MAX)
+        if len(observation) == self.n_sonars + 1:
+            servo_angle_norm = (observation[-1] + SERVO_ANGLE_MAX) / (2 * SERVO_ANGLE_MAX)
             observation_norm = np.r_[observation_norm, servo_angle_norm]
+        assert ((observation_norm >= 0.) & (observation_norm <= 1.)).all()
         return observation_norm.tolist()
 
     def process_action(self, action_tanh):
