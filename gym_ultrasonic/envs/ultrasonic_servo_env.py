@@ -6,11 +6,11 @@ import gym
 import numpy as np
 from gym import spaces
 from gym.envs.classic_control import rendering
-from shapely.geometry import LineString
+from shapely.geometry import LineString, MultiLineString
 
-from .obstacle import Robot, Obstacle, Servo
 from .constants import WHEEL_VELOCITY_MAX, SERVO_ANGLE_MAX, SENSOR_DIST_MAX, ROBOT_HEIGHT, ROBOT_WIDTH, \
     SCREEN_SCALE_DOWN, SCREEN_SIZE, OBSERVATIONS_MEMORY_SIZE, SERVO_ANGULAR_VELOCITY, SIMULATION_TIME_STEP
+from .obstacle import Robot, Obstacle, Servo
 
 
 class UltrasonicEnv(gym.Env):
@@ -220,10 +220,18 @@ class UltrasonicEnv(gym.Env):
             self.init_view()
 
         if self._current_trajectory is not None:
-            trajectory_coords = np.array(self._current_trajectory.boundary.coords, dtype=np.float32) / SCREEN_SCALE_DOWN
-            trajectory_view = rendering.FilledPolygon(trajectory_coords)
-            trajectory_view._color.vec4 = (0, 0, 0.9, 0.2)
-            self.viewer.add_onetime(trajectory_view)
+            trajectory_boundary = self._current_trajectory.boundary
+            if isinstance(trajectory_boundary, MultiLineString):
+                trajectory_linestrings = trajectory_boundary.geoms
+            elif isinstance(trajectory_boundary, LineString):
+                trajectory_linestrings = [trajectory_boundary]
+            else:
+                raise ValueError(f"Invalid trajectory boundary: {trajectory_boundary}")
+            for linestring in trajectory_linestrings:
+                trajectory_coords = np.array(linestring.coords, dtype=np.float32) / SCREEN_SCALE_DOWN
+                trajectory_view = rendering.FilledPolygon(trajectory_coords)
+                trajectory_view._color.vec4 = (0, 0, 0.9, 0.2)
+                self.viewer.add_onetime(trajectory_view)
 
         _, intersection_xy = self.robot.ray_cast(self.obstacles)
         intersection_xy = intersection_xy / SCREEN_SCALE_DOWN
