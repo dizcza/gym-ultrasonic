@@ -23,7 +23,7 @@ np.random.seed(27)
 ENV_NAME = 'UltrasonicServo-v0'
 
 # Get the environment and extract the number of actions.
-env = gym.make(ENV_NAME, time_step=0.1)
+env = gym.make(ENV_NAME)
 env.seed(27)
 # env = gym.wrappers.Monitor(env, "capture", force=True)
 nb_actions = env.action_space.shape[0]

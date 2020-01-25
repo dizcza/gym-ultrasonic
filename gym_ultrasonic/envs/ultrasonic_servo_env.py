@@ -10,7 +10,7 @@ from shapely.geometry import LineString
 
 from .obstacle import Robot, Obstacle, Servo
 from .constants import WHEEL_VELOCITY_MAX, SERVO_ANGLE_MAX, SENSOR_DIST_MAX, ROBOT_HEIGHT, ROBOT_WIDTH, \
-    SCREEN_SCALE_DOWN, SCREEN_SIZE, OBSERVATIONS_MEMORY_SIZE
+    SCREEN_SCALE_DOWN, SCREEN_SIZE, OBSERVATIONS_MEMORY_SIZE, SERVO_ANGULAR_VELOCITY, SIMULATION_TIME_STEP
 
 
 class UltrasonicEnv(gym.Env):
@@ -27,12 +27,14 @@ class UltrasonicEnv(gym.Env):
     # action space box is slightly larger because of the additive noise
     action_space = spaces.Box(low=-WHEEL_VELOCITY_MAX, high=WHEEL_VELOCITY_MAX, shape=(2,))
 
-    def __init__(self, n_obstacles=4, time_step=0.1):
+    def __init__(self, n_obstacles=4, time_step=SIMULATION_TIME_STEP):
         """
         Parameters
         ----------
         n_obstacles: int
             Num. of obstacles on the scene.
+        time_step: float
+            Simulation time step, used in :func:`Robot.diffdrive` and :func:`Servo.rotate`
         """
         super().__init__()
         self.time_step = time_step
@@ -101,7 +103,7 @@ class UltrasonicEnv(gym.Env):
         servo_turn = action[2] if len(action) == 3 else None
         move_step, angle_rotate, trajectory = self.robot.diffdrive(vel_left, vel_right, sim_time=self.time_step)
         self._current_trajectory = trajectory
-        self.robot.servo.rotate(servo_turn)
+        self.robot.servo.rotate(sim_time=self.time_step, angle_turn=servo_turn)
         reward, done = self.reward(trajectory, move_step, angle_rotate, servo_turn)
         self.state = self.update_state()
         info = dict(move_step=move_step, angle_rotate=angle_rotate)
@@ -253,12 +255,14 @@ class UltrasonicServoEnv(UltrasonicEnv):
     observation_space = spaces.Box(low=np.tile([0, -SERVO_ANGLE_MAX], reps=OBSERVATIONS_MEMORY_SIZE),
                                    high=np.tile([SENSOR_DIST_MAX, SERVO_ANGLE_MAX], reps=OBSERVATIONS_MEMORY_SIZE))
 
-    def __init__(self, n_obstacles=4, time_step=0.1, servo_angular_vel=2.0):
+    def __init__(self, n_obstacles=4, time_step=SIMULATION_TIME_STEP, servo_angular_vel=SERVO_ANGULAR_VELOCITY):
         """
         Parameters
         ----------
         n_obstacles: int
             Num. of obstacles on the scene.
+        time_step: float
+            Simulation time step, used in :func:`Robot.diffdrive` and :func:`Servo.rotate`
         servo_angular_vel: float or str
             Servo angular velocity, radians per sec.
         """

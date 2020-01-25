@@ -103,12 +103,14 @@ class ServoStub(Obstacle):
         super().__init__(position=[0, 0], width=width, height=height, angle=0)
         self.angle_range = angle_range
 
-    def rotate(self, angle_turn=None):
+    def rotate(self, sim_time=None, angle_turn=None):
         """
         Does nothing.
 
         Parameters
         ----------
+        sim_time: float
+            Simulation time step, sec.
         angle_turn: float
             Angle to rotate the servo. Ignored.
         """
@@ -145,26 +147,25 @@ class Servo(ServoStub):
         """
         super().__init__(width=width, height=height, angle_range=angle_range)
         self.angular_vel = angular_vel
-        self.tick = None
         self.ccw = 1
 
-    def rotate(self, angle_turn=None):
+    def rotate(self, sim_time=None, angle_turn=None):
         """
         Rotates the servo.
 
         Parameters
         ----------
+        sim_time: float
+            Simulation time step, sec.
         angle_turn: float
             Angle to rotate the servo.
             If set to `None`, it's calculated by the time spent, multiplied by the angular velocity.
         """
-        if self.tick is None:
-            self.tick = time.time()
-        tick = time.time()
+        if sim_time is None and angle_turn is None:
+            raise ValueError("Either sim_time or angle_turn must be specified.")
         if angle_turn is None:
-            angle_turn = (tick - self.tick) * self.angular_vel * self.ccw
+            angle_turn = sim_time * self.angular_vel * self.ccw
         angle = self.angle + angle_turn
-        self.tick = tick
         min_angle, max_angle = self.angle_range
         if angle > max_angle:
             angle = max_angle
