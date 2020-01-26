@@ -23,8 +23,7 @@ class UltrasonicEnv(gym.Env):
     # action space box is slightly larger because of the additive noise
     action_space = spaces.Box(low=-WHEEL_VELOCITY_MAX, high=WHEEL_VELOCITY_MAX, shape=(2,))
 
-    def __init__(self, n_obstacles=N_OBSTACLES, time_step=SIMULATION_TIME_STEP,
-                 sonar_direction_angles=(0,)):
+    def __init__(self, n_obstacles=N_OBSTACLES, time_step=SIMULATION_TIME_STEP, sonar_direction_angles=(0,)):
         """
         Parameters
         ----------
@@ -264,9 +263,8 @@ class UltrasonicServoEnv(UltrasonicEnv):
     The task is the same: avoid obstacles. Never stops (no target).
     """
 
-    def __init__(self, n_obstacles=N_OBSTACLES, time_step=SIMULATION_TIME_STEP,
-                 sonar_direction_angles=(0,),
-                 servo_angular_vel=SERVO_ANGULAR_VELOCITY):
+    def __init__(self, n_obstacles=N_OBSTACLES, time_step=SIMULATION_TIME_STEP, sonar_direction_angles=(0,),
+                 servo_angular_vel=SERVO_ANGULAR_VELOCITY, observe_servo_angle=True):
         """
         Parameters
         ----------
@@ -278,14 +276,18 @@ class UltrasonicServoEnv(UltrasonicEnv):
             List of sonar direction angles.
         servo_angular_vel: float or str
             Servo angular velocity, radians per sec.
+        observe_servo_angle: bool
+            Include robot's servo angle in the observation space (True) or not (False).
         """
+        self.observe_servo_angle = observe_servo_angle
         super().__init__(n_obstacles=n_obstacles, time_step=time_step, sonar_direction_angles=sonar_direction_angles)
 
-        # dist to obstacles, servo_angle
-        self.observation_space = spaces.Box(
-            low=np.r_[self.observation_space.low, -SERVO_ANGLE_MAX],
-            high=np.r_[self.observation_space.high, SERVO_ANGLE_MAX]
-        )
+        if self.observe_servo_angle:
+            # dist to obstacles, servo_angle
+            self.observation_space = spaces.Box(
+                low=np.r_[self.observation_space.low, -SERVO_ANGLE_MAX],
+                high=np.r_[self.observation_space.high, SERVO_ANGLE_MAX]
+            )
 
         if servo_angular_vel == 'learn':
             # wheels left and right velocity (mm/s), servo turn (radians)
@@ -300,6 +302,7 @@ class UltrasonicServoEnv(UltrasonicEnv):
         state: List[float]
             Min dist to obstacles and servo rotation angle.
         """
-        min_dist_array, _ = self.robot.ray_cast(self.obstacles)
-        new_state = min_dist_array + [self.robot.servo.angle]
+        new_state = super().update_state()
+        if self.observe_servo_angle:
+            new_state = new_state + [self.robot.servo.angle]
         return new_state
