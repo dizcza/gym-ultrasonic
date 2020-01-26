@@ -1,4 +1,3 @@
-import math
 import random
 from typing import List
 
@@ -10,7 +9,7 @@ from shapely.geometry import LineString, MultiLineString
 
 from .constants import WHEEL_VELOCITY_MAX, SERVO_ANGLE_MAX, SENSOR_DIST_MAX, ROBOT_HEIGHT, ROBOT_WIDTH, \
     SCREEN_SCALE_DOWN, SCREEN_SIZE, SERVO_ANGULAR_VELOCITY, SIMULATION_TIME_STEP, \
-    N_OBSTACLES
+    N_OBSTACLES, SONAR_TURN_ANGLE_MAX_LEARN_MODE
 from .obstacle import Robot, Obstacle
 
 
@@ -249,10 +248,14 @@ class UltrasonicEnv(gym.Env):
         return self.viewer.render(return_rgb_array=with_rgb)
 
     def __str__(self):
-        return f"{super().__str__()}:\nobservation_space={self.observation_space.low, self.observation_space.high};" \
-               f"\naction_space={self.action_space.low, self.action_space.high};" \
-               f"\n{self.robot};" \
-               f"\nnum. of obstacles: {len(self.obstacles) - 4}"  # 4 walls
+        with np.printoptions(precision=2, suppress=True):
+            msg = f"{super().__str__()}:" \
+                  f"\ntime_step={self.time_step} s" \
+                  f"\nobservation_space={self.observation_space.low, self.observation_space.high};" \
+                  f"\naction_space={self.action_space.low, self.action_space.high};" \
+                  f"\n{self.robot};" \
+                  f"\nnum. of obstacles: {len(self.obstacles) - 4}"  # 4 walls
+        return msg
 
 
 class UltrasonicServoEnv(UltrasonicEnv):
@@ -286,7 +289,7 @@ class UltrasonicServoEnv(UltrasonicEnv):
 
         if servo_angular_vel == 'learn':
             # wheels left and right velocity (mm/s), servo turn (radians)
-            upperbound = np.array([WHEEL_VELOCITY_MAX, WHEEL_VELOCITY_MAX, math.radians(20)])
+            upperbound = np.array([WHEEL_VELOCITY_MAX, WHEEL_VELOCITY_MAX, SONAR_TURN_ANGLE_MAX_LEARN_MODE])
             self.action_space = spaces.Box(low=-upperbound, high=upperbound)
         self.robot.servo.angular_vel = servo_angular_vel
 

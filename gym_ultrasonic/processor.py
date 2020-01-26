@@ -3,7 +3,8 @@ from typing import List
 import numpy as np
 from rl.core import Processor
 
-from gym_ultrasonic.envs.constants import SERVO_ANGLE_MAX, SENSOR_DIST_MAX, WHEEL_VELOCITY_MAX
+from gym_ultrasonic.envs.constants import SERVO_ANGLE_MAX, SENSOR_DIST_MAX, WHEEL_VELOCITY_MAX, \
+    SONAR_TURN_ANGLE_MAX_LEARN_MODE
 
 
 class UnitsProcessor(Processor):
@@ -52,5 +53,8 @@ class UnitsProcessor(Processor):
         action_tanh: np.ndarray
             Scaled action in range `[-action_scale, action_scale]`.
         """
-        action_tanh = action_tanh * WHEEL_VELOCITY_MAX
+        action_tanh = np.copy(action_tanh)
+        action_tanh[:2] = action_tanh[:2] * WHEEL_VELOCITY_MAX
+        if len(action_tanh) == 3:
+            action_tanh[2] *= SONAR_TURN_ANGLE_MAX_LEARN_MODE
         return action_tanh

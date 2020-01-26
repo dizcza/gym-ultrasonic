@@ -153,7 +153,10 @@ class Servo(Obstacle):
         self.angle = 0
 
     def extra_repr(self):
-        return f"angle_range={self.angle_range}, angular_vel={self.angular_vel}"
+        to_degrees = lambda rads: '(' + ', '.join(f"{math.degrees(rad):.1f}" for rad in rads) + ')'
+        return f"sonar_direction_angles={to_degrees(self.sonar_direction_angles)} degrees, " \
+               f"angle_range={to_degrees(self.angle_range)} degrees, " \
+               f"angular_vel={math.degrees(self.angular_vel):.1f} degrees/s"
 
 
 class Robot(Obstacle):
@@ -400,4 +403,4 @@ class Robot(Obstacle):
         self.servo.reset()
 
     def extra_repr(self):
-        return f"{super().extra_repr()}, {self.servo}, sensor_max_dist={self.sensor_max_dist}"
+        return f"{super().extra_repr()}, {self.servo}, sensor_max_dist={self.sensor_max_dist} mm"
